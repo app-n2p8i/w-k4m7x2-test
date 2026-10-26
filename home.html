@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>依頼管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2430;
+  --ink-soft:#6B7480;
+  --ink-faint:#A2A8B3;
+  --line:#E4E7EC;
+  --bg-page:#EEF1F5;
+  --white:#FFFFFF;
+  --accent:#2A4B8D;
+  --accent-deep:#1E3766;
+  --accent-soft:#E6ECF7;
+  --alert:#C4531F;
+  --alert-soft:#FBEAE0;
+  --amber:#B98418;
+  --amber-soft:#FAF0DE;
+  --ready:#2F7D4F;
+  --ready-soft:#E4F3E8;
+  --muted:#8B93A0;
+  --muted-soft:#F0F1F3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(circle at 1px 1px, rgba(42,75,141,0.06) 1px, transparent 0) 0 0/22px 22px,
+    var(--bg-page);
+  color:var(--ink);
+  font-family:-apple-system, "Hiragino Kaku Gothic ProN", "游ゴシック", YuGothic, sans-serif;
+  min-height:100vh;
+}
+.mono{ font-family:'JetBrains Mono', monospace; }
+
+/* ログイン画面 */
+.login-box{max-width:360px;margin:80px auto;text-align:center;padding:0 16px}
+.login-box h1{font-size:19px;font-weight:800;color:var(--ink);margin-bottom:22px}
+.btn-google{padding:13px 26px;background:var(--accent);color:#fff;border:none;border-radius:999px;font-size:14px;font-weight:800;font-family:-apple-system, "Hiragino Kaku Gothic ProN", "游ゴシック", YuGothic, sans-serif;cursor:pointer;box-shadow:0 8px 18px rgba(30,55,102,0.28)}
+.btn-google:hover{background:var(--accent-deep)}
+#auth-loading{text-align:center;padding:80px 0;color:var(--ink-soft);font-size:14px}
+#auth-msg{margin-top:14px;font-size:13px;color:var(--alert)}
+.login-box p{font-size:14px;color:var(--alert);line-height:1.6}
+
+/* ================= PHONE FRAME (依頼者・作業者) ================= */
+.page-wrap{ max-width:820px; margin:0 auto; padding:20px 14px 40px; }
+.phone{
+  width:100%; max-width:480px; margin:0 auto;
+  background:var(--white);
+  display:flex; flex-direction:column; position:relative;
+}
+
+.app-header{ flex:0 0 auto; padding:26px 18px 12px; display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid var(--line); }
+.app-header .eyebrow{ font-size:11px; color:var(--ink-faint); font-weight:700; letter-spacing:.02em; }
+.app-header .date{ margin-top:3px; font-size:13.5px; font-weight:700; color:var(--ink); }
+.header-icon{ width:32px; height:32px; border-radius:50%; background:var(--bg-page); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); flex-shrink:0; }
+.header-icon svg{ width:16px; height:16px; }
+
+.app-content{ flex:1 1 auto; min-height:0; padding:12px 16px calc(78px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; overflow-y:visible; }
+
+/* recent status — 反映確認(依頼者) */
+.recent-card{ flex:0 0 auto; background:var(--white); border:1px solid var(--line); border-radius:16px; padding:12px 14px 8px; }
+.recent-card .rc-title{ font-size:10.5px; font-weight:800; color:var(--ink-soft); margin-bottom:4px; }
+.recent-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px solid var(--line); }
+.recent-row:first-of-type{ border-top:none; }
+.recent-row .rr-main{ display:flex; flex-direction:column; min-width:0; }
+.recent-row .rr-date{ font-size:9.5px; color:var(--ink-faint); }
+.recent-row .rr-name{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.status-pill{ flex-shrink:0; display:flex; align-items:center; gap:3px; font-size:9.5px; font-weight:800; padding:3px 8px; border-radius:999px; }
+.status-pill svg{ width:10px; height:10px; }
+.status-pill.ok{ background:var(--accent-soft); color:var(--accent-deep); }
+.status-pill.wip{ background:var(--amber-soft); color:var(--amber); }
+.status-pill.ready{ background:var(--ready-soft); color:var(--ready); }
+.status-pill.done{ background:#E7EEF6; color:#3D5A80; }
+.status-pill.canceled{ background:var(--muted-soft); color:var(--muted); }
+.empty-note{ text-align:center; color:var(--ink-faint); font-size:11.5px; padding:10px 0; }
+
+.cta-card{
+  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--accent); color:#fff; border-radius:16px; padding:13px 15px; cursor:pointer;
+  box-shadow:0 8px 18px rgba(30,55,102,0.28);
+}
+.cta-card .ct-title{ font-size:13.5px; font-weight:800; }
+.cta-card .ct-sub{ font-size:10px; opacity:.85; margin-top:1px; }
+.cta-card .ct-icon{ width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.cta-card .ct-icon svg{ width:15px; height:15px; }
+
+/* 作業者用ランチャー */
+.launcher-card{
+  flex:0 0 auto; position:relative; overflow:hidden; cursor:pointer;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%); color:#fff;
+  border-radius:20px; padding:20px 18px 18px;
+  box-shadow:0 10px 22px rgba(30,55,102,0.3);
+  display:flex; flex-direction:column; gap:12px;
+}
+.launcher-card .lc-top{ display:flex; align-items:center; gap:12px; }
+.launcher-card .lc-icon{ width:44px; height:44px; border-radius:13px; background:rgba(255,255,255,0.16); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.launcher-card .lc-icon svg{ width:22px; height:22px; }
+.launcher-card .lc-title{ font-size:17px; font-weight:800; }
+.launcher-card .lc-sub{ font-size:11px; opacity:.85; margin-top:2px; }
+.launcher-card .lc-cta{
+  align-self:flex-start; background:rgba(255,255,255,0.2); border-radius:999px;
+  padding:8px 16px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:6px;
+}
+.launcher-card .lc-cta svg{ width:13px; height:13px; }
+.launcher-card .lc-mark{ position:absolute; right:-18px; bottom:-22px; width:110px; height:110px; opacity:.14; }
+
+.shortcuts{ flex:0 0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:8px; }
+.shortcut{ background:var(--white); border:1px solid var(--line); border-radius:14px; padding:11px 8px 9px; display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; cursor:pointer; }
+.shortcut.disabled{ opacity:.55; }
+.shortcut .icon{ width:30px; height:30px; border-radius:9px; background:var(--accent-soft); color:var(--accent-deep); display:flex; align-items:center; justify-content:center; }
+.shortcut .icon svg{ width:15px; height:15px; }
+.shortcut .label{ font-size:10px; font-weight:700; text-align:center; line-height:1.3; }
+.shortcut .desc{ font-size:8.8px; color:var(--ink-faint); text-align:center; line-height:1.3; }
+
+.spacer{ flex:1 1 auto; }
+
+.tabbar{ position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex; border-top:1px solid var(--line); background:rgba(255,255,255,0.96); backdrop-filter:blur(6px); padding:7px 4px calc(13px + env(safe-area-inset-bottom)); }
+.tab{ flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--ink-faint); cursor:pointer; }
+.tab svg{ width:20px; height:20px; }
+.tab .tlabel{ font-size:9px; font-weight:700; }
+.tab.active{ color:var(--accent-deep); }
+
+/* ログイン中バー(スマホ用ヘッダーの下に出す簡易表示) */
+.login-name-bar{ font-size:9.5px; color:var(--ink-faint); text-align:center; padding:4px 0 0; }
+
+/* ================= ADMIN SHELL (管理者・PC左メニュー方式) ================= */
+.admin-shell{ width:100%; display:flex; min-height:100vh; align-items:stretch; }
+.admin-sidebar{ width:80px; flex:0 0 auto; background:var(--accent-deep); display:flex; flex-direction:column; align-items:center; padding:20px 0 12px; }
+.admin-sidebar .as-logo{ color:#fff; font-size:21px; margin-bottom:20px; }
+.as-nav{ display:flex; flex-direction:column; gap:5px; width:100%; align-items:center; }
+.as-item{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 3px; color:rgba(255,255,255,0.6); cursor:pointer; border-radius:11px; width:64px; }
+.as-item svg{ width:18px; height:18px; }
+.as-item .as-label{ font-size:8.3px; font-weight:700; text-align:center; line-height:1.25; }
+.as-item:hover{ background:rgba(255,255,255,0.09); color:#fff; }
+.as-item.active{ background:rgba(255,255,255,0.18); color:#fff; }
+
+.admin-main{ flex:1 1 auto; min-width:0; background:var(--bg-page); padding:24px 30px 48px; }
+.admin-topbar{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.admin-topbar h2{ margin:0; font-size:20px; font-weight:800; }
+.admin-topbar .pc-date{ font-size:12px; color:var(--ink-soft); margin-top:3px; }
+
+.admin-stats{ display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+
+.admin-group{ margin-bottom:26px; }
+.admin-group-label{ font-size:11.5px; font-weight:800; color:var(--ink-soft); letter-spacing:.03em; margin-bottom:10px; padding-left:2px; }
+.admin-group-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
+.admin-group-grid.compact{ grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+
+.pc-tile{ position:relative; border:1px solid var(--line); background:var(--white); border-radius:14px; padding:16px 14px 14px; display:flex; flex-direction:column; gap:8px; cursor:pointer; transition:box-shadow .15s ease, transform .15s ease; }
+.pc-tile:hover{ box-shadow:0 10px 20px rgba(20,22,26,0.08); transform:translateY(-2px); }
+.pc-tile.disabled{ opacity:.55; }
+.pc-tile.large{ padding:22px 18px 18px; }
+.pc-tile.large .icon{ width:46px; height:46px; border-radius:13px; }
+.pc-tile.large .icon svg{ width:23px; height:23px; }
+.pc-tile.large .name{ font-size:16px; }
+.pc-tile .icon{ width:38px; height:38px; border-radius:11px; background:var(--accent-soft); color:var(--accent-deep); display:flex; align-items:center; justify-content:center; }
+.pc-tile .icon svg{ width:19px; height:19px; }
+.pc-tile .name{ font-size:14px; font-weight:800; }
+.pc-tile .desc{ font-size:11px; color:var(--ink-soft); line-height:1.5; }
+.pc-tile .pc-badge2{ position:absolute; top:14px; right:14px; font-size:10.5px; font-weight:800; color:var(--alert); background:var(--alert-soft); padding:2px 8px; border-radius:999px; }
+.pc-tile.settings-row{ flex-direction:row; align-items:center; padding:12px 14px; gap:12px; }
+.pc-tile.settings-row .icon{ width:32px; height:32px; border-radius:9px; flex-shrink:0; }
+.pc-tile.settings-row .icon svg{ width:16px; height:16px; }
+.pc-tile.settings-row .name{ font-size:13px; }
+.pc-tile.settings-row .desc{ font-size:10.5px; }
+
+.pc-stats{ display:flex; gap:12px; flex-wrap:wrap; }
+.pc-stat{ background:var(--white); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-width:150px; }
+.pc-stat .num{ font-size:22px; font-weight:800; }
+.pc-stat.alert .num{ color:var(--alert); }
+.pc-stat .lbl{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+.pc-badge{ font-size:11px; font-weight:700; color:var(--ink-soft); background:var(--white); border:1px solid var(--line); padding:5px 11px; border-radius:999px; }
+
+/* 通知ベル */
+.notif-bell{ position:relative; width:32px; height:32px; border-radius:50%; background:var(--bg-page); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); flex-shrink:0; border:none; cursor:pointer; }
+.notif-bell svg{ width:16px; height:16px; }
+.notif-bell .notif-count{ position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--alert); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.notif-bell .notif-count.hide{ display:none; }
+.pc-badge-row{ display:flex; align-items:center; gap:8px; }
+
+/* 通知一覧パネル */
+.notif-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:999; }
+.notif-overlay.show{ display:flex; }
+.notif-panel{ width:min(360px,90vw); max-height:70vh; background:#fff; border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+.notif-panel-head{ display:flex; align-items:center; justify-content:space-between; }
+.notif-panel-head h3{ margin:0; font-size:15px; }
+.notif-panel-close{ border:none; background:none; font-size:14px; color:var(--ink-soft); cursor:pointer; }
+.notif-list{ overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+.notif-item{ padding:10px 12px; border-radius:10px; background:var(--bg-page); font-size:13px; cursor:pointer; }
+.notif-item.unread{ background:var(--alert-soft); font-weight:700; }
+.notif-item .notif-time{ font-size:11px; color:var(--ink-faint); margin-top:3px; font-weight:400; }
+.notif-empty{ font-size:13px; color:var(--ink-faint); text-align:center; padding:20px 0; }
+
+@media (max-width:640px){
+  .admin-sidebar{ width:60px; }
+  .as-item{ width:48px; }
+  .admin-main{ padding:18px 14px 40px; }
+}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+<div id="auth-loading"><div style="text-align:center;padding:80px 0;color:#6B7480;font-size:14px">読み込み中...</div></div>
+
+<div id="auth-login" class="login-box" style="display:none">
+  <h1>🪵 依頼管理システム</h1>
+  <button class="btn-google" onclick="loginWithGoogle()">Googleでログイン</button>
+  <div id="auth-msg"></div>
+</div>
+
+<div id="auth-denied" class="login-box" style="display:none">
+  <h1>🪵 依頼管理システム</h1>
+  <p>このアカウントはまだ利用登録されていません。管理者に連絡してください。</p>
+</div>
+
+<!-- 依頼者・作業者向け(スマホ枠) -->
+<div id="app-content" class="page-wrap" style="display:none">
+  <div class="phone" id="phoneFrame">
+    <div class="app-header">
+      <div>
+        <div class="date mono" id="headerDate"></div>
+        <div class="login-name-bar">ログイン中：<span id="login-name-display"></span> さん</div>
+      </div>
+      <div class="pc-badge-row">
+        <button class="notif-bell" id="notifBellPhone" style="display:none" onclick="openNotifPanel()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-count hide" id="notifCountPhone">0</span>
+        </button>
+      </div>
+    </div>
+    <div class="app-content" id="role-body"></div>
+    <div class="tabbar" id="tabbar"></div>
+  </div>
+</div>
+
+<!-- 管理者向け(PC・左メニュー方式) -->
+<div id="admin-content" style="display:none">
+  <div class="admin-shell">
+    <div class="admin-sidebar">
+      <div class="as-logo">🪵</div>
+      <div class="as-nav" id="adminSidebarNav"></div>
+    </div>
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <div>
+          <h2>管理者ダッシュボード</h2>
+          <div class="pc-date" id="pcDate"></div>
+        </div>
+        <div class="pc-badge-row">
+          <button class="notif-bell" id="notifBellAdmin" onclick="openNotifPanel()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-count hide" id="notifCountAdmin">0</span>
+          </button>
+          <div class="pc-badge">ログイン中：<span id="login-name-display-admin"></span> さん</div>
+        </div>
+      </div>
+      <div class="pc-stats admin-stats" id="pcStats"></div>
+      <div id="admin-body"></div>
+    </div>
+  </div>
+</div>
+
+<div class="notif-overlay" id="notifOverlay">
+  <div class="notif-panel">
+    <div class="notif-panel-head">
+      <h3>お知らせ</h3>
+      <button class="notif-panel-close" onclick="closeNotifPanel()">閉じる</button>
+    </div>
+    <div class="notif-list" id="notifList"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = window.APP_CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = window.APP_CONFIG.SUPABASE_KEY;
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ★同じ場所（GitHub Pages）に置く前提のURL構成
+const URLS = {
+  home: 'home.html',
+  form: 'formB_size.html',
+  mypage: 'mypage.html',
+  stock: 'stock_view.html',
+  workCalendar: 'work_calendar.html',
+  requestCalendar: 'request_calendar.html',
+  receptionLog: 'reception_log.html',
+  settings: 'business_days_admin.html',
+  changeHistory: 'change_history.html'
+};
+
+let currentUser = { email: '', name: '', role: '' };
+let myNotifications = [];
+
+function notifTimeText(iso){
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderNotifBadges(){
+  const unread = myNotifications.filter(n => !n.is_read).length;
+  [document.getElementById('notifCountPhone'), document.getElementById('notifCountAdmin')].forEach(el=>{
+    if(!el) return;
+    el.textContent = unread > 99 ? '99+' : String(unread);
+    el.classList.toggle('hide', unread === 0);
+  });
+}
+
+async function loadNotifications(){
+  const { data, error } = await sbClient
+    .from('notifications')
+    .select('id, type, before_value, after_value, is_read, created_at')
+    .eq('recipient_email', currentUser.email)
+    .order('created_at', { ascending: false });
+  if(error) return;
+  myNotifications = data || [];
+  renderNotifBadges();
+}
+
+function renderNotifList(){
+  const listEl = document.getElementById('notifList');
+  if(!myNotifications.length){
+    listEl.innerHTML = '<div class="notif-empty">お知らせはありません</div>';
+    return;
+  }
+  listEl.innerHTML = myNotifications.map(n => `
+    <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead('${n.id}')">
+      <div>${escapeHtmlSafe((n.before_value ? n.before_value + ' ' : '') + (n.after_value || ''))}</div>
+      <div class="notif-time">${notifTimeText(n.created_at)}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtmlSafe(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openNotifPanel(){
+  renderNotifList();
+  document.getElementById('notifOverlay').classList.add('show');
+}
+function closeNotifPanel(){
+  document.getElementById('notifOverlay').classList.remove('show');
+}
+
+async function markNotifRead(id){
+  const target = myNotifications.find(n => n.id === id);
+  if(!target || target.is_read) return;
+  target.is_read = true;
+  renderNotifBadges();
+  renderNotifList();
+  await sbClient.from('notifications').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', id);
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// 依頼フォームの階層カテゴリ「3000まで」「3001以上」は、サイズで自動振り分けするための
+// 内部区分にすぎず、品目名として意味を持たないため、画面表示からは常に除外する。
+const HIDDEN_CATEGORY_LABELS = ['3000まで', '3001以上'];
+function displayCategory(cat, itemName){
+  return HIDDEN_CATEGORY_LABELS.includes(cat) ? (itemName || '') : (cat || '');
+}
+function shortDate(ymd){
+  const m = String(ymd).match(/^\d{4}-(\d{1,2})-(\d{1,2})/);
+  return m ? `${parseInt(m[1],10)}/${parseInt(m[2],10)}` : ymd;
+}
+function goto(url){ location.href = url; }
+function comingSoon(){ alert('準備中の機能です。'); }
+
+const WEEKDAYS = ['日','月','火','水','木','金','土'];
+function headerDateText(d){
+  return `${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
+}
+function pcDateText(d){
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
+}
+
+// =============================================
+// アイコン
+// =============================================
+const icons = {
+  home: `<path d="M4 11l8-7 8 7"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/>`,
+  form: `<path d="M4 3h13l4 4v14a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 9h8M8 13h8M8 17h5"/>`,
+  plus: `<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>`,
+  calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>`,
+  stock: `<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>`,
+  user: `<circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4.2-6 7-6s5.8 2 7 6"/>`,
+  wrench: `<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.6-.6-.6-2.6z"/>`,
+  doc: `<path d="M6 3h9l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h3M8 16h6M8 10h2"/>`,
+  gear: `<circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M4.6 7.3l2 1.2M17.4 15.5l2 1.2M4.6 16.7l2-1.2M17.4 8.5l2-1.2M3 12h2.4M18.6 12H21"/>`,
+  truck: `<rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="1.6"/><circle cx="16.5" cy="19" r="1.6"/>`,
+  check: `<path d="M20 6L9 17l-5-5"/>`,
+  dot: `<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>`,
+  dash: `<path d="M6 12h12"/>`,
+  arrow: `<path d="M5 12h14M13 6l6 6-6 6"/>`,
+  history: `<path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>`
+};
+function icon(name, extra=''){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" ${extra}>${icons[name]}</svg>`; }
+function statusIcon(cls){
+  if(cls==='wip') return icon('dot');
+  if(cls==='canceled') return icon('dash','stroke-width="2.6"');
+  return icon('check','stroke-width="2.6"');
+}
+function statusClass(label){
+  if(label==='取消済み') return 'canceled';
+  if(label==='発注済み') return 'done';
+  if(label==='受付済み') return 'ok';
+  if(label==='作業中') return 'wip';
+  if(label==='発注可能') return 'ready';
+  return 'ok';
+}
+
+// =============================================
+// 依頼者ホーム
+// =============================================
+async function renderRequesterHome(){
+
+  const body = document.getElementById('role-body');
+  body.innerHTML = `
+    <div class="recent-card">
+      <div class="rc-title">直近の依頼 — 反映状況</div>
+      <div id="recent-list"><div class="empty-note">読み込み中...</div></div>
+    </div>
+    <div class="cta-card" onclick="goto(URLS.form)">
+      <div><div class="ct-title">新しい依頼を送る</div><div class="ct-sub">依頼フォームを開く</div></div>
+      <div class="ct-icon">${icon('plus','stroke-width="2.2"')}</div>
+    </div>
+    <div class="shortcuts">
+      <div class="shortcut" onclick="goto(URLS.stock)"><div class="icon">${icon('stock','stroke-width="1.8"')}</div><div class="label">在庫表</div><div class="desc">在庫を見る</div></div>
+      <div class="shortcut" onclick="goto(URLS.requestCalendar)"><div class="icon">${icon('calendar','stroke-width="1.8"')}</div><div class="label">依頼カレンダー</div><div class="desc">依頼を一覧で確認</div></div>
+    </div>
+    <div class="spacer"></div>`;
+
+  document.getElementById('tabbar').innerHTML = `
+    <div class="tab active">${icon('home','stroke-width="2.2"')}<div class="tlabel">ホーム</div></div>
+    <div class="tab" onclick="goto(URLS.form)">${icon('form','stroke-width="1.8"')}<div class="tlabel">依頼</div></div>
+    <div class="tab" onclick="goto(URLS.requestCalendar)">${icon('calendar','stroke-width="1.8"')}<div class="tlabel">カレンダー</div></div>
+    <div class="tab" onclick="goto(URLS.stock)">${icon('stock','stroke-width="1.8"')}<div class="tlabel">在庫</div></div>
+    <div class="tab" onclick="goto(URLS.mypage)">${icon('user','stroke-width="1.8"')}<div class="tlabel">マイページ</div></div>`;
+
+  await loadRecentForRequester();
+}
+
+async function loadRecentForRequester(){
+  const { data: reqRows } = await sbClient.from('requests').select('id').eq('requester_email', currentUser.email);
+  const requestIds = (reqRows || []).map(r => r.id);
+  if(!requestIds.length){
+    document.getElementById('recent-list').innerHTML = '<div class="empty-note">まだ依頼がありません</div>';
+    return;
+  }
+  const { data: itemRows } = await sbClient.from('request_items').select('id, category, item_name').in('request_id', requestIds);
+  const itemIds = (itemRows || []).map(r => r.id);
+  const itemById = {};
+  (itemRows || []).forEach(it => { itemById[it.id] = it; });
+  if(!itemIds.length){
+    document.getElementById('recent-list').innerHTML = '<div class="empty-note">まだ依頼がありません</div>';
+    return;
+  }
+  const { data: dateRows } = await sbClient
+    .from('request_item_dates')
+    .select('id, request_item_id, delivery_date, status, canceled_at, created_at')
+    .in('request_item_id', itemIds)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if(!dateRows || !dateRows.length){
+    document.getElementById('recent-list').innerHTML = '<div class="empty-note">まだ依頼がありません</div>';
+    return;
+  }
+
+  document.getElementById('recent-list').innerHTML = dateRows.map(d => {
+    const parent = itemById[d.request_item_id] || {};
+    const isOrdered = d.status === '発注済み・受取待ち';
+    const label = d.canceled_at ? '取消済み' : (isOrdered ? '発注済み' : d.status);
+    const cls = statusClass(label);
+    return `
+      <div class="recent-row">
+        <div class="rr-main">
+          <div class="rr-date mono">${escapeHtml(shortDate(d.delivery_date))} 送信</div>
+          <div class="rr-name">${escapeHtml(displayCategory(parent.category, parent.item_name))}</div>
+        </div>
+        <div class="status-pill ${cls}">${statusIcon(cls)}<span>${escapeHtml(label)}</span></div>
+      </div>`;
+  }).join('');
+}
+
+// =============================================
+// 作業者ホーム
+// =============================================
+function renderWorkerHome(){
+  const body = document.getElementById('role-body');
+  body.innerHTML = `
+    <div class="launcher-card" onclick="goto(URLS.workCalendar)">
+      <div class="lc-mark">${icon('calendar','stroke-width="1.2"')}</div>
+      <div class="lc-top">
+        <div class="lc-icon">${icon('calendar','stroke-width="1.8"')}</div>
+        <div>
+          <div class="lc-title">作業カレンダー</div>
+          <div class="lc-sub">未完了の依頼を確認・進捗を更新</div>
+        </div>
+      </div>
+      <div class="lc-cta"><span>開く</span>${icon('arrow','stroke-width="2.4"')}</div>
+    </div>
+    <div class="shortcuts">
+      <div class="shortcut disabled" onclick="comingSoon()"><div class="icon">${icon('doc','stroke-width="1.8"')}</div><div class="label">手順書</div><div class="desc">準備中</div></div>
+      <div class="shortcut" onclick="goto(URLS.stock)"><div class="icon">${icon('stock','stroke-width="1.8"')}</div><div class="label">在庫表</div><div class="desc">在庫を操作</div></div>
+    </div>
+    <div class="spacer"></div>`;
+
+  document.getElementById('tabbar').innerHTML = `
+    <div class="tab active">${icon('home','stroke-width="2.2"')}<div class="tlabel">ホーム</div></div>
+    <div class="tab" onclick="comingSoon()">${icon('wrench','stroke-width="1.8"')}<div class="tlabel">作業工程</div></div>
+    <div class="tab" onclick="goto(URLS.workCalendar)">${icon('calendar','stroke-width="1.8"')}<div class="tlabel">カレンダー</div></div>
+    <div class="tab" onclick="comingSoon()">${icon('doc','stroke-width="1.8"')}<div class="tlabel">手順書</div></div>
+    <div class="tab" onclick="goto(URLS.stock)">${icon('stock','stroke-width="1.8"')}<div class="tlabel">在庫</div></div>`;
+}
+
+// =============================================
+// 管理者ホーム(PC・左メニュー方式)
+// =============================================
+function sidebarNavItem(iconName, label, url, active){
+  const onclickAttr = active ? '' : `onclick="goto('${url}')"`;
+  return `<div class="as-item ${active ? 'active' : ''}" ${onclickAttr}>${icon(iconName,'stroke-width="1.8"')}<div class="as-label">${label}</div></div>`;
+}
+
+function renderAdminSidebar(activeKey){
+  const items = [
+    ['home','home','ホーム', URLS.home],
+    ['reqCal','calendar','依頼<br>カレンダー', URLS.requestCalendar],
+    ['workCal','truck','作業<br>カレンダー', URLS.workCalendar],
+    ['log','doc','受付<br>日報', URLS.receptionLog],
+    ['stock','stock','在庫表', URLS.stock],
+    ['history','history','変更<br>履歴', URLS.changeHistory],
+    ['settings','gear','設定', URLS.settings]
+  ];
+  document.getElementById('adminSidebarNav').innerHTML = items
+    .map(([key, iconName, label, url]) => sidebarNavItem(iconName, label, url, key === activeKey))
+    .join('');
+}
+
+function renderAdminHome(){
+  renderAdminSidebar('home');
+
+  const body = document.getElementById('admin-body');
+  body.innerHTML = `
+    <div class="admin-group">
+      <div class="admin-group-label">受注・進捗</div>
+      <div class="admin-group-grid">
+        <div class="pc-tile large" onclick="goto(URLS.requestCalendar)"><div class="icon">${icon('calendar','stroke-width="1.8"')}</div><div class="name">依頼カレンダー</div><div class="desc">全依頼の一覧を確認する</div></div>
+        <div class="pc-tile large" onclick="goto(URLS.workCalendar)"><div class="icon">${icon('truck','stroke-width="1.8"')}</div><div class="name">作業カレンダー</div><div class="desc">未完成の依頼を管理する</div></div>
+        <div class="pc-tile disabled" onclick="comingSoon()"><div class="icon">${icon('wrench','stroke-width="1.8"')}</div><div class="name">作業工程</div><div class="desc">全依頼明細の進捗を一覧管理（準備中）</div></div>
+        <div class="pc-tile" onclick="goto(URLS.receptionLog)"><div class="icon">${icon('doc','stroke-width="1.8"')}</div><div class="name">受付日報</div><div class="desc">受付順の一覧・その日の進捗状況</div></div>
+      </div>
+    </div>
+    <div class="admin-group">
+      <div class="admin-group-label">在庫・仕組み</div>
+      <div class="admin-group-grid">
+        <div class="pc-tile large" onclick="goto(URLS.stock)"><div class="icon">${icon('stock','stroke-width="1.8"')}</div><div class="name">在庫表</div><div class="desc">最低数ライン変更を含む全操作（配送済み操作も含む）</div></div>
+        <div class="pc-tile disabled" onclick="comingSoon()"><div class="icon">${icon('doc','stroke-width="1.8"')}</div><div class="name">手順書</div><div class="desc">登録・修正・自動生成（準備中）</div></div>
+      </div>
+    </div>
+    <div class="admin-group">
+      <div class="admin-group-label">履歴</div>
+      <div class="admin-group-grid compact">
+        <div class="pc-tile settings-row" onclick="goto(URLS.changeHistory)"><div class="icon">${icon('history','stroke-width="1.8"')}</div><div><div class="name">変更履歴</div><div class="desc">依頼・発注・進捗・在庫の操作ログ</div></div></div>
+      </div>
+    </div>
+    <div class="admin-group">
+      <div class="admin-group-label">設定</div>
+      <div class="admin-group-grid compact">
+        <div class="pc-tile settings-row" onclick="goto(URLS.settings)"><div class="icon">${icon('gear','stroke-width="1.8"')}</div><div><div class="name">設定</div><div class="desc">営業日の例外設定</div></div></div>
+      </div>
+    </div>`;
+}
+
+async function loadAdminStats(){
+  const statsEl = document.getElementById('pcStats');
+  statsEl.innerHTML = `<div class="pc-stat"><div class="num">…</div><div class="lbl">在庫僅少 品目</div></div>`;
+
+  const { data, error } = await sbClient
+    .from('stock_items')
+    .select('id, stock_qty, min_line')
+    .eq('is_deleted', false);
+
+  if(error || !data){
+    statsEl.innerHTML = `<div class="pc-stat"><div class="num">-</div><div class="lbl">在庫僅少 品目</div></div>`;
+    return;
+  }
+
+  const lowCount = data.filter(row => (row.min_line ?? 0) > 0 && (row.stock_qty ?? 0) <= row.min_line).length;
+  statsEl.innerHTML = `<div class="pc-stat${lowCount > 0 ? ' alert' : ''}"><div class="num">${lowCount}</div><div class="lbl">在庫僅少 品目</div></div>`;
+}
+
+async function loginWithGoogle(){
+  const { error } = await sbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error){
+    document.getElementById('auth-msg').textContent = 'ログインに失敗しました：' + error.message;
+  }
+}
+
+async function initAuth(){
+  const { data: { user } } = await sbClient.auth.getUser();
+
+  if(!user){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-login').style.display='block';
+    return;
+  }
+
+  const { data: allowRow, error: allowErr } = await sbClient
+    .from('users_allowlist')
+    .select('name, role')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if(allowErr || !allowRow || !allowRow.name){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-denied').style.display='block';
+    return;
+  }
+
+  currentUser.email = user.email;
+  currentUser.name = allowRow.name;
+  currentUser.role = allowRow.role;
+
+  document.getElementById('auth-loading').style.display='none';
+
+  const now = new Date();
+
+  if(currentUser.role === '管理者'){
+    document.getElementById('login-name-display-admin').textContent = currentUser.name;
+    document.getElementById('pcDate').textContent = pcDateText(now) + ' — 全画面から全操作可能';
+    document.getElementById('admin-content').style.display = 'block';
+    renderAdminHome();
+    await loadAdminStats();
+    await loadNotifications();
+    setInterval(loadNotifications, 30000);
+  } else if(currentUser.role === '作業者'){
+    document.getElementById('login-name-display').textContent = currentUser.name;
+    document.getElementById('headerDate').textContent = headerDateText(now);
+    document.getElementById('app-content').style.display = 'block';
+    renderWorkerHome();
+  } else {
+    document.getElementById('login-name-display').textContent = currentUser.name;
+    document.getElementById('headerDate').textContent = headerDateText(now);
+    document.getElementById('app-content').style.display = 'block';
+    document.getElementById('notifBellPhone').style.display = 'flex';
+    await renderRequesterHome();
+    await loadNotifications();
+    setInterval(loadNotifications, 30000);
+  }
+}
+
+initAuth();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("service-worker.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

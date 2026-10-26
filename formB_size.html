@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>木箱依頼フォーム</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Meiryo','Yu Gothic',sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+.container{max-width:720px;margin:24px auto;padding:0 12px 40px}
+h1{font-size:18px;font-weight:bold;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:8px;margin-bottom:20px}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:18px;margin-bottom:14px}
+.form-group{margin-bottom:12px}
+label{display:block;font-size:12px;font-weight:bold;color:#555;margin-bottom:3px}
+label .req{color:#e53e3e;margin-left:2px}
+select,input[type="date"],input[type="number"],input[type="text"],textarea{
+  width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:4px;
+  font-size:13px;font-family:inherit;background:#fff;
+}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#3182ce;box-shadow:0 0 0 2px rgba(49,130,206,.2)}
+
+/* 品目カード */
+.item-block{background:#f7f9fc;border:1px solid #d0d8e4;border-radius:6px;padding:14px;margin-bottom:10px}
+.item-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.item-num{font-size:12px;font-weight:bold;color:#2c5282;background:#dbeafe;padding:2px 8px;border-radius:10px}
+.btn-del-item{background:none;border:none;color:#999;font-size:18px;cursor:pointer;line-height:1;padding:2px 6px}
+.btn-del-item:hover{color:#e53e3e}
+
+/* 自由入力切替 */
+.input-toggle{display:flex;gap:6px;align-items:center}
+.input-toggle select,.input-toggle input{flex:1}
+.btn-free{font-size:11px;white-space:nowrap;padding:6px 10px;border:1px solid #aaa;border-radius:4px;background:#fff;cursor:pointer;color:#555}
+.btn-free:hover{background:#f0f4f8}
+
+/* L/W/H分割入力 */
+.lwh-sep{color:#999;font-size:13px;flex-shrink:0}
+.lwh-input{flex:1;min-width:0;width:auto}
+
+/* 台木リフト */
+.daimoku-row{display:flex;gap:8px;margin-top:6px}
+.daimoku-row label{font-size:12px;font-weight:normal;color:#555;display:flex;align-items:center;gap:4px;cursor:pointer;flex:1;padding:6px 10px;border:1px solid #ccc;border-radius:4px;background:#fff}
+.daimoku-row input[type="radio"]{width:auto;margin:0}
+.daimoku-row label.selected{border-color:#2c5282;background:#dbeafe;color:#1a3a5c;font-weight:bold}
+
+/* 納入日行 */
+.date-rows{display:flex;flex-direction:column;gap:6px}
+.date-row{display:grid;grid-template-columns:1fr 90px auto;gap:8px;align-items:end}
+.btn-add-date{font-size:12px;color:#3182ce;background:none;border:1px dashed #3182ce;border-radius:4px;padding:4px 10px;cursor:pointer;margin-top:4px;display:inline-block}
+.btn-add-date:hover{background:#ebf8ff}
+
+/* ＋品目ボタン */
+.btn-add-item{width:100%;padding:10px;border:2px dashed #3182ce;border-radius:6px;background:none;color:#3182ce;font-size:14px;font-weight:bold;cursor:pointer;margin-bottom:14px}
+.btn-add-item:hover{background:#ebf8ff}
+
+/* 送信ボタン */
+.btn-submit{width:100%;padding:13px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer}
+.btn-submit:hover{background:#2c5282}
+.btn-submit:disabled{background:#aaa;cursor:not-allowed}
+
+/* 確認画面 */
+#confirm-screen{display:none}
+.confirm-table{width:100%;border-collapse:collapse;font-size:13px}
+.confirm-table th{background:#f0f4f8;text-align:left;padding:7px 10px;font-weight:bold;color:#555;width:130px;border:1px solid #e2e8f0;white-space:nowrap}
+.confirm-table td{padding:7px 10px;border:1px solid #e2e8f0;vertical-align:top}
+.confirm-table td input[type="text"],.confirm-table td input[type="date"],.confirm-table td input[type="number"]{width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:3px;font-size:13px}
+.item-confirm-block{background:#f7f9fc;border:1px solid #d0d8e4;border-radius:6px;padding:12px;margin-bottom:10px}
+.confirm-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.btn-back{padding:12px;background:#fff;border:2px solid #1a3a5c;color:#1a3a5c;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-back:hover{background:#f0f4f8}
+.btn-send{padding:12px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-send:hover{background:#2c5282}
+.btn-send:disabled{background:#aaa;cursor:not-allowed}
+
+/* 送信後ボタン */
+.after-send-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;display:none}
+.btn-continue{padding:12px;background:#276749;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-continue:hover{background:#2f855a}
+.btn-continue:disabled,.btn-close:disabled{opacity:.5;cursor:not-allowed}
+#shikumi-progress:empty{display:none}
+#shikumi-progress{margin-top:10px;padding:8px 10px;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;font-size:12px;color:#856404;text-align:center}
+.btn-close{padding:12px;background:#fff;border:2px solid #999;color:#555;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-close:hover{background:#f0f0f0}
+
+#msg{margin-top:14px;font-size:14px;text-align:center;padding:10px;border-radius:4px}
+#msg.ok{color:#276749;background:#f0fff4;border:1px solid #9ae6b4}
+#msg.err{color:#c53030;background:#fff5f5;border:1px solid #fc8181}
+#msg2{margin-top:14px;font-size:14px;text-align:center;padding:10px;border-radius:4px}
+#msg2.ok{color:#276749;background:#f0fff4;border:1px solid #9ae6b4}
+#msg2.err{color:#c53030;background:#fff5f5;border:1px solid #fc8181}
+
+.subcat-group{display:none}
+.subcat-group.active{display:block}
+
+/* 客先名 サジェストリスト */
+.client-combo{position:relative}
+.client-suggest{position:absolute;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:180px;overflow-y:auto;z-index:30;display:none;box-shadow:0 4px 10px rgba(0,0,0,.12)}
+.client-suggest.show{display:block}
+.client-suggest button{display:block;width:100%;text-align:left;padding:9px 10px;border:none;border-bottom:1px solid #f0f0f0;background:#fff;font-size:13px;color:#333;cursor:pointer}
+.client-suggest button:last-child{border-bottom:none}
+.client-suggest button:hover,.client-suggest button:active{background:#ebf8ff}
+.login-box{max-width:360px;margin:80px auto;text-align:center}
+.login-box h1{border:none;margin-bottom:20px}
+.btn-google{padding:13px 24px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-google:hover{background:#2c5282}
+#auth-loading{text-align:center;padding:60px 0;color:#666;font-size:14px}
+.login-name-bar{font-size:12px;color:#555;background:#eef3f8;padding:8px 12px;border-radius:6px;margin-bottom:14px}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+<div class="container">
+
+<div id="auth-loading">読み込み中...</div>
+
+<div id="auth-login" class="login-box" style="display:none">
+  <h1>🪵 木箱依頼フォーム</h1>
+  <button class="btn-google" onclick="loginWithGoogle()">Googleでログイン</button>
+  <div id="auth-msg" style="margin-top:14px;font-size:13px;color:#c53030"></div>
+</div>
+
+<div id="auth-denied" class="login-box" style="display:none">
+  <h1>🪵 木箱依頼フォーム</h1>
+  <p style="font-size:14px;color:#c53030">このアカウントはまだ利用登録されていません。管理者に連絡してください。</p>
+</div>
+
+<div id="app-content" style="display:none">
+
+<!-- ===== 入力画面 ===== -->
+<div id="input-screen">
+  <h1>🪵 木箱依頼フォーム</h1>
+
+  <div class="login-name-bar">ログイン中：<span id="login-name-display"></span> さん</div>
+
+  <!-- 品目ブロック -->
+  <div id="items-container"></div>
+
+  <button class="btn-add-item" onclick="addItem()">＋ 品目を追加する</button>
+
+  <!-- 備考 -->
+  <div class="card">
+    <div class="form-group">
+      <label>備考の対象</label>
+      <select id="biko-target">
+        <option value="all">全品目共通</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>備考（任意）</label>
+      <textarea id="note" rows="3" placeholder="特記事項があれば入力してください"></textarea>
+    </div>
+  </div>
+
+  <button class="btn-submit" onclick="goConfirm()">内容を確認する →</button>
+  <div id="msg"></div>
+</div>
+
+<!-- ===== 確認画面 ===== -->
+<div id="confirm-screen">
+  <h1>🪵 依頼内容の確認</h1>
+  <p style="font-size:13px;color:#666;margin-bottom:14px">内容を直接編集できます。よければ「送信する」を押してください。</p>
+  <div id="confirm-content"></div>
+  <div class="confirm-btns" id="confirm-btns">
+    <button class="btn-back" onclick="goBack()">← 戻る</button>
+    <button class="btn-send" id="btn-send" onclick="submitForm()">送信する</button>
+  </div>
+  <div class="after-send-btns" id="after-send-btns">
+    <button class="btn-continue" id="btn-continue-form" onclick="continueForm()">続けて依頼する</button>
+    <button class="btn-close" id="btn-close-form" onclick="closeForm()">閉じる</button>
+  </div>
+  <div id="shikumi-progress"></div>
+  <div id="msg2"></div>
+</div>
+
+</div><!-- /#app-content -->
+
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ★ 仕組オーダーシートフォームの公開URL（現状のまま。GAS版に依存する別フローのため今回は変更しない）
+const SHIKUMI_FORM_URL = "./shikumi_form.html";
+
+const SUPABASE_URL = window.APP_CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = window.APP_CONFIG.SUPABASE_KEY;
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = { email: '', name: '' }; // ログイン中のユーザー情報
+
+// 営業日の例外（business_day_exceptions）：日付文字列 → true(営業)/false(休業)
+let BUSINESS_EXC = {};
+
+function ymdOf(dt){
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+// 営業日か判定：例外設定があればそれを優先、なければ月〜金が営業日
+function isBusinessDayLocal(dt){
+  const exc = BUSINESS_EXC[ymdOf(dt)];
+  if(exc !== undefined) return exc;
+  const dow = dt.getDay();
+  return dow >= 1 && dow <= 5;
+}
+
+// 中3日ルール：JST基準の今日から数えて、間に3営業日を挟んだ次の営業日（＝今日の翌営業日から数えて4番目の営業日）を返す
+function minAllowedDateStr(){
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit' });
+  const parts = fmt.formatToParts(new Date());
+  const y = parseInt(parts.find(p=>p.type==='year').value,10);
+  const m = parseInt(parts.find(p=>p.type==='month').value,10);
+  const d = parseInt(parts.find(p=>p.type==='day').value,10);
+  const dt = new Date(y, m-1, d);
+  let count = 0;
+  while(count < 4){
+    dt.setDate(dt.getDate()+1);
+    if(isBusinessDayLocal(dt)) count++;
+  }
+  return ymdOf(dt);
+}
+
+// すべての品目の日付欄の最小日付を更新し直す（営業日の例外を読み込んだ後に使う）
+function refreshAllDateMins(){
+  document.querySelectorAll('[id^="dates-"]').forEach(el=>{
+    const id = el.id.replace('dates-','');
+    if(/^\d+$/.test(id)) applyDateMinForItem(parseInt(id,10));
+  });
+}
+
+// スマホ（iPhone等）は日付選択で選べない日付を灰色にできないため、選んだ時点でチェックして弾く
+document.addEventListener('change', function(e){
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('input[type="date"]') || !t.value) return;
+  let urgentEl = null;
+  if(t.classList.contains('date-input')){
+    const container = t.closest('[id^="dates-"]');
+    if(container) urgentEl = document.getElementById('urgent-' + container.id.replace('dates-',''));
+  } else {
+    const cls = [...t.classList].find(c=>/^c-date-\d+$/.test(c));
+    if(cls) urgentEl = document.getElementById('c-urgent-' + cls.replace('c-date-',''));
+  }
+  if(urgentEl && urgentEl.checked) return;
+  const min = minAllowedDateStr();
+  if(t.value < min){
+    t.value = '';
+    alert('納入日は中3日ルールにより ' + min + ' 以降を選んでください。（急ぎの場合は「急ぎ」をONにしてください）');
+  }
+});
+
+// 急ぎチェックボックスの状態に応じて、その品目の日付欄すべてのmin属性を更新する
+function applyDateMinForItem(id){
+  const urgentEl = document.getElementById(`urgent-${id}`);
+  const urgent = urgentEl ? urgentEl.checked : false;
+  const min = urgent ? '' : minAllowedDateStr();
+  const container = document.getElementById(`dates-${id}`);
+  if(!container) return;
+  container.querySelectorAll('.date-input').forEach(inp=>{ inp.min = min; });
+}
+
+let CLIENTS = []; // 客先名一覧（起動時にSupabaseの最新データで上書きされる。読み込み完了までは空扱い）
+let TEAMS = []; // 班一覧（id, team_name。起動時にSupabaseの最新データで上書きされる）
+
+// ★工機カテゴリのサブカテゴリ・サイズは今回からSupabase（size_master）から取得する
+let KOKI_DATA = {};
+// ★カテゴリ・サイズ一覧は今回からSupabase（size_master）から取得する（loadMasters内でここに組み立てる）
+let itemData = {};
+
+// ★仮カテゴリ（新カテゴリ・承認待ち）一覧。loadMasters内でpending_categoriesから取得する
+let PENDING_CATEGORIES = [];
+
+// ★依頼者ごとの「よく使うサイズ」一覧。loadMasters内でfavorite_sizesから取得する
+let FAVORITES = [];
+
+// サイズ→カテゴリ逆引き用インデックス（全カテゴリ横断・完全一致検索用）
+// ★Supabaseからのデータ読み込み完了後（loadMasters内）に構築する
+const FLAT_SIZE_INDEX = [];
+function rebuildFlatIndex(){
+  FLAT_SIZE_INDEX.length = 0;
+  Object.keys(itemData).forEach(cat=>{
+    const val = itemData[cat];
+    if(Array.isArray(val)){
+      val.forEach(s=>{ if(s!=='該当なし') FLAT_SIZE_INDEX.push({cat, subcat:'', size:s}); });
+    } else {
+      Object.keys(val).forEach(sub=>{
+        val[sub].forEach(s=>{ if(s!=='該当なし') FLAT_SIZE_INDEX.push({cat, subcat:sub, size:s}); });
+      });
+    }
+  });
+  Object.keys(KOKI_DATA).forEach(sub=>{
+    KOKI_DATA[sub].forEach(s=>{ if(s!=='該当なし') FLAT_SIZE_INDEX.push({cat:'工機', subcat:sub, size:s}); });
+  });
+}
+
+// サイズ検索で候補が見つからなかった場合のL/W/Hを一時保持（自由入力欄への引き継ぎ用）
+const pendingSizeCarry = {};
+
+// L/W/H入力欄で4桁になったら次の欄へ自動でフォーカス移動する（3桁で終わる場合は何もしない）
+function autoAdvanceLWH(el, nextId){
+  if(el.value.length >= 4){
+    const next = document.getElementById(nextId);
+    if(next) next.focus();
+  }
+}
+
+// カテゴリ自由入力の表記ゆれを軽く統一する（前後の空白除去・全角スペース→半角）
+function normalizeFreeText(s){
+  return String(s || '').trim().replace(/\u3000/g, ' ');
+}
+
+let itemCount = 0;
+
+// 客先名入力欄HTML生成（品目ブロック用）
+// ★datalistはブラウザにより部分一致になる／モバイルでは候補自体が出ないことがあるため、
+//   自前実装のサジェストリスト（先頭一致・タップ対応）に変更。
+//   一覧にない客先名もそのまま自由入力できる。
+function makeClientSelect(id){
+  return `
+    <div class="form-group" id="client-group-${id}">
+      <label>客先名（任意）</label>
+      <div class="client-combo">
+        <input type="text" id="client-input-${id}" placeholder="客先名を入力（候補が絞り込まれます）" autocomplete="off"
+          oninput="onClientInput(${id})" onfocus="onClientInput(${id})" onblur="onClientBlur(${id})">
+        <div id="client-suggest-${id}" class="client-suggest"></div>
+      </div>
+    </div>`;
+}
+
+// 班選択欄HTML生成（品目ブロック用）。FA・新工場など、依頼のたびに必須選択。
+function makeTeamSelect(id){
+  const opts = TEAMS.map(t=>`<option value="${t.id}">${escapeHtml(t.team_name)}</option>`).join('');
+  return `
+    <div class="form-group">
+      <label>班<span class="req">*</span></label>
+      <select id="team-${id}">
+        <option value="">-- 選択 --</option>
+        ${opts}
+      </select>
+    </div>`;
+}
+
+function getTeamVal(id){
+  const el = document.getElementById(`team-${id}`);
+  return el ? el.value : '';
+}
+
+function getClientVal(id){
+  const el = document.getElementById(`client-input-${id}`);
+  return el ? el.value.trim() : '';
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 入力中の文字列の「先頭一致」のみで候補を絞り込む（未入力時は全件表示）
+function onClientInput(id){
+  const input = document.getElementById(`client-input-${id}`);
+  const box = document.getElementById(`client-suggest-${id}`);
+  if(!input || !box) return;
+  const q = input.value.trim().toLowerCase();
+  const list = q ? CLIENTS.filter(c=>c.toLowerCase().startsWith(q)) : CLIENTS;
+  if(!list.length){ box.innerHTML=''; box.classList.remove('show'); return; }
+  box.innerHTML = list.map(c=>`<button type="button" onmousedown="event.preventDefault()" onclick="selectClient(${id},'${encodeURIComponent(c)}')">${escapeHtml(c)}</button>`).join('');
+  box.classList.add('show');
+}
+
+// タップ/クリック時に入力欄のフォーカスが先に外れて候補が消えないよう、少し遅らせてから閉じる
+function onClientBlur(id){
+  setTimeout(()=>{
+    const box = document.getElementById(`client-suggest-${id}`);
+    if(box) box.classList.remove('show');
+  }, 150);
+}
+
+function selectClient(id, encodedName){
+  const input = document.getElementById(`client-input-${id}`);
+  const box = document.getElementById(`client-suggest-${id}`);
+  if(input) input.value = decodeURIComponent(encodedName);
+  if(box) box.classList.remove('show');
+}
+
+// =============================================
+// 工機データは全体データ（loadMasters）読み込み時に既にKOKI_DATAへ格納済みのため、
+// ここでは「読み込み済みかどうか」を確認して即座にcallbackを呼ぶだけにする
+// =============================================
+function ensureKokiLoaded(callback){
+  callback();
+}
+
+function addItem(data){
+  itemCount++;
+  const id = itemCount;
+  const div = document.createElement('div');
+  div.className='item-block'; div.id=`item-${id}`;
+
+  const normalCats = Object.keys(itemData).filter(k=>!['工機','その他'].includes(k)).sort((a,b)=>a.localeCompare(b,'ja'));
+  let catOpts = '<option value="">-- 選択 --</option>';
+  normalCats.forEach(c=>{ catOpts+=`<option value="${c}">${c}</option>`; });
+  PENDING_CATEGORIES.forEach(p=>{ catOpts+=`<option value="pending:${p.id}">${p.category_name}（新カテゴリ・承認待ち）</option>`; });
+  catOpts += '<option value="3000まで">3000まで</option><option value="3001以上">3001以上</option>';
+  catOpts += '<option value="工機">工機</option><option value="__other__">その他（直接入力）</option>';
+
+  div.innerHTML = `
+    <div class="item-block-header">
+      <span class="item-num">品目 ${id}</span>
+      ${id>1?`<button class="btn-del-item" onclick="removeItem(${id})">×</button>`:''}
+    </div>
+    ${makeClientSelect(id)}
+    ${makeTeamSelect(id)}
+    <div class="form-group">
+      <label>サイズから検索（任意・L×W×H完全一致）</label>
+      <div class="input-toggle">
+        <input type="number" id="sizesearch-l-${id}" class="lwh-input" placeholder="L" inputmode="numeric" oninput="onSizeSearchInput(${id});autoAdvanceLWH(this,'sizesearch-w-${id}')">
+        <span class="lwh-sep">×</span>
+        <input type="number" id="sizesearch-w-${id}" class="lwh-input" placeholder="W" inputmode="numeric" oninput="onSizeSearchInput(${id});autoAdvanceLWH(this,'sizesearch-h-${id}')">
+        <span class="lwh-sep">×</span>
+        <input type="number" id="sizesearch-h-${id}" class="lwh-input" placeholder="H" inputmode="numeric" oninput="onSizeSearchInput(${id})">
+      </div>
+      <div id="sizesearch-results-${id}" style="margin-top:6px"></div>
+    </div>
+    ${FAVORITES.length ? `
+    <div class="form-group">
+      <button type="button" class="btn-free" onclick="toggleFavList(${id})">★ よく使うサイズ（${FAVORITES.length}件）</button>
+      <div id="fav-list-${id}" style="display:none;margin-top:6px"></div>
+    </div>` : ''}
+    <div class="form-group">
+      <label>カテゴリ<span class="req">*</span></label>
+      <select id="cat-${id}" onchange="onCatChange(${id})">
+        ${catOpts}
+      </select>
+    </div>
+    <div class="form-group" id="cat-other-group-${id}" style="display:none">
+      <label>カテゴリ名（新規）<span class="req">*</span></label>
+      <input type="text" id="cat-other-text-${id}" placeholder="新しいカテゴリ名を入力">
+    </div>
+    <div class="subcat-group" id="subcat-koki-${id}">
+      <div class="form-group">
+        <label>工機 サブカテゴリ<span class="req">*</span></label>
+        <div class="input-toggle">
+          <select id="subcat-${id}" onchange="onSubCatChange(${id})">
+            <option value="">-- 選択 --</option>
+            <option value="__other__">その他（直接入力）</option>
+          </select>
+          <input type="text" id="subcat-text-${id}" placeholder="サブカテゴリとサイズを入力" style="display:none">
+          <button type="button" class="btn-free" id="subcat-back-${id}" onclick="clearSubcatOther(${id})" style="display:none">← 一覧</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>サイズ<span class="req">*</span></label>
+      <div class="input-toggle">
+        <select id="item-sel-${id}" onchange="onSizeSelChange(${id})">
+          <option value="">-- カテゴリを先に選択 --</option>
+        </select>
+        <div id="item-lwh-${id}" style="display:none;gap:4px;align-items:center;flex:1">
+          <input type="number" id="item-l-${id}" class="lwh-input" placeholder="L" inputmode="numeric" oninput="autoAdvanceLWH(this,'item-w-${id}')">
+          <span class="lwh-sep">×</span>
+          <input type="number" id="item-w-${id}" class="lwh-input" placeholder="W" inputmode="numeric" oninput="autoAdvanceLWH(this,'item-h-${id}')">
+          <span class="lwh-sep">×</span>
+          <input type="number" id="item-h-${id}" class="lwh-input" placeholder="H" inputmode="numeric">
+        </div>
+        <button type="button" class="btn-free" id="item-back-${id}" onclick="clearSizeOther(${id})" style="display:none">← 一覧</button>
+      </div>
+
+    </div>
+    <div class="form-group" id="daimoku-group-${id}" style="display:none">
+      <label>台木リフト</label>
+      <div class="daimoku-row" id="daimoku-row-${id}">
+        <label id="dl-nashi-${id}"><input type="radio" name="daimoku-${id}" value="なし" checked onchange="updateDaimokuStyle(${id})"> なし</label>
+        <label id="dl-ari-${id}"><input type="radio" name="daimoku-${id}" value="あり" onchange="updateDaimokuStyle(${id})"> あり</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="urgent-${id}" style="width:auto" onchange="applyDateMinForItem(${id})">急ぎ（当日納入も可）
+      </label>
+    </div>
+    <div class="form-group">
+      <label>納入日・数量<span class="req">*</span></label>
+      <div class="date-rows" id="dates-${id}">
+        <div class="date-row">
+          <div><label style="font-size:11px;color:#777">日付</label><input type="date" class="date-input"></div>
+          <div><label style="font-size:11px;color:#777">数量(c/s)</label><input type="number" class="qty-input" min="1" placeholder="個"></div>
+          <div style="padding-bottom:2px"></div>
+        </div>
+      </div>
+      <button class="btn-add-date" onclick="addDateRow(${id})">＋ 日付・数量を追加</button>
+    </div>
+  `;
+  document.getElementById('items-container').appendChild(div);
+  updateDaimokuStyle(id);
+  refreshBikoTargetOptions();
+  applyDateMinForItem(id);
+}
+
+function removeItem(id){ const el=document.getElementById(`item-${id}`); if(el)el.remove(); delete pendingSizeCarry[id]; refreshBikoTargetOptions(); }
+
+// 備考「対象」プルダウンの選択肢を、現在の品目数に合わせて更新する
+function refreshBikoTargetOptions(){
+  const sel = document.getElementById('biko-target');
+  if(!sel) return;
+  const current = sel.value;
+  const n = document.querySelectorAll('.item-block').length;
+  let opts = '<option value="all">全品目共通</option>';
+  for(let i=1;i<=n;i++){ opts += `<option value="${i}">品目${i}のみ</option>`; }
+  sel.innerHTML = opts;
+  if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+function addDateRow(id){
+  const container = document.getElementById(`dates-${id}`);
+  const row = document.createElement('div');
+  row.className='date-row';
+  row.innerHTML=`
+    <div><label style="font-size:11px;color:#777">日付</label><input type="date" class="date-input"></div>
+    <div><label style="font-size:11px;color:#777">数量(c/s)</label><input type="number" class="qty-input" min="1" placeholder="個"></div>
+    <div style="padding-bottom:2px"><button onclick="this.closest('.date-row').remove()" style="background:none;border:none;color:#999;font-size:18px;cursor:pointer;padding:4px">×</button></div>
+  `;
+  container.appendChild(row);
+  applyDateMinForItem(id);
+}
+
+// 候補なし検索から来た場合、サイズ一覧プルダウンを出さずに自由入力欄（引き継ぎ済み）を直接表示する
+function showFreeSizeInput(id, restoreFn){
+  const itemSel=document.getElementById(`item-sel-${id}`);
+  itemSel.innerHTML='<option value="__other__">直接入力</option>';
+  itemSel.style.display='none';
+  document.getElementById(`item-lwh-${id}`).style.display='flex';
+  const backBtn=document.getElementById(`item-back-${id}`);
+  backBtn.style.display='';
+  backBtn.onclick=()=>{ clearSizeOther(id); if(restoreFn) restoreFn(); };
+  document.getElementById(`daimoku-group-${id}`).style.display='';
+  updateDaimokuStyle(id);
+  applyPendingSizeCarry(id);
+}
+
+function toggleFavList(id){
+  const el = document.getElementById(`fav-list-${id}`);
+  if(!el) return;
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  if(show) renderFavList(id);
+}
+
+function renderFavList(id){
+  const listEl = document.getElementById(`fav-list-${id}`);
+  if(!listEl) return;
+  if(!FAVORITES.length){
+    listEl.innerHTML = '<div style="font-size:12px;color:#999">登録されているお気に入りはありません</div>';
+    return;
+  }
+  listEl.innerHTML = FAVORITES.map(f=>{
+    const label = `${f.category}　${f.size}${f.daimoku_lift ? '（台木リフトあり）' : ''}`;
+    return `<button type="button" class="btn-free" style="display:block;width:100%;margin-bottom:4px;text-align:left" onclick="applyFavorite(${id},'${f.id}')">${escapeHtml(label)}</button>`;
+  }).join('');
+}
+
+// お気に入りの内容を、指定した品目ブロックへ一括反映する
+function applyFavorite(id, favId){
+  const f = FAVORITES.find(x=>String(x.id)===String(favId));
+  if(!f) return;
+  const catSel = document.getElementById(`cat-${id}`);
+  const isKoki = f.category.startsWith('工機_');
+  const catValueToCheck = isKoki ? '工機' : f.category;
+  const optionExists = [...catSel.options].some(o=>o.value===catValueToCheck);
+  if(!optionExists){
+    alert('このお気に入りは現在選択できません（カテゴリ一覧が変更された可能性があります）。');
+    return;
+  }
+
+  if(isKoki){
+    const sub = f.category.slice('工機_'.length);
+    catSel.value = '工機';
+    onCatChange(id);
+    const subSel = document.getElementById(`subcat-${id}`);
+    subSel.value = sub;
+    onSubCatChange(id);
+  } else {
+    catSel.value = f.category;
+    onCatChange(id);
+  }
+
+  const sizeSel = document.getElementById(`item-sel-${id}`);
+  sizeSel.value = f.size;
+  onSizeSelChange(id);
+
+  const daimokuVal = f.daimoku_lift ? 'あり' : 'なし';
+  const radio = document.querySelector(`input[name="daimoku-${id}"][value="${daimokuVal}"]`);
+  if(radio){ radio.checked = true; updateDaimokuStyle(id); }
+
+  const listEl = document.getElementById(`fav-list-${id}`);
+  if(listEl) listEl.style.display = 'none';
+}
+
+function onCatChange(id){
+  document.getElementById(`subcat-koki-${id}`).classList.remove('active');
+  document.getElementById(`cat-other-group-${id}`).style.display='none';
+  clearSizeSelect(id);
+  const cat = document.getElementById(`cat-${id}`).value;
+  if(cat==='工機'){
+    document.getElementById(`subcat-koki-${id}`).classList.add('active');
+    const subcatSel = document.getElementById(`subcat-${id}`);
+    subcatSel.innerHTML = '<option value="">-- 読み込み中... --</option>';
+    ensureKokiLoaded(()=>{
+      if(document.getElementById(`cat-${id}`).value !== '工機') return;
+      let opts = '<option value="">-- 選択 --</option>';
+      Object.keys(KOKI_DATA).forEach(k=>{ opts+=`<option value="${k}">${k}</option>`; });
+      opts += '<option value="__other__">その他（直接入力）</option>';
+      subcatSel.innerHTML = opts;
+    });
+  }
+  else if(cat==='3000まで' || cat==='3001以上'){
+    // カテゴリ一覧から直接「3000まで」「3001以上」を選んだ場合、サブカテゴリを経由せずそのままサイズ一覧を表示
+    if(pendingSizeCarry[id]) showFreeSizeInput(id, ()=>populateSizeSorted(id, itemData['その他'][cat]));
+    else populateSizeSorted(id, itemData['その他'][cat]);
+  }
+  else if(cat.startsWith('pending:')){
+    // 仮カテゴリ（新カテゴリ・承認待ち）選択 → 名前入力は不要。サイズはL/W/H自由入力のまま
+    const itemSel=document.getElementById(`item-sel-${id}`);
+    itemSel.innerHTML='<option value="__other__">直接入力</option>';
+    itemSel.style.display='none';
+    document.getElementById(`item-lwh-${id}`).style.display='flex';
+    document.getElementById(`item-back-${id}`).style.display='';
+    document.getElementById(`item-back-${id}`).onclick=()=>{ clearSizeSelect(id); document.getElementById(`cat-${id}`).value=''; };
+    document.getElementById(`daimoku-group-${id}`).style.display='';
+    updateDaimokuStyle(id);
+    applyPendingSizeCarry(id);
+  }
+  else if(cat==='__other__'){
+    // カテゴリ自由入力 → カテゴリ名入力欄を表示し、サイズもL/W/H直接入力に切り替え
+    document.getElementById(`cat-other-group-${id}`).style.display='';
+    const itemSel=document.getElementById(`item-sel-${id}`);
+    itemSel.innerHTML='<option value="__other__">直接入力</option>';
+    itemSel.style.display='none';
+    document.getElementById(`item-lwh-${id}`).style.display='flex';
+    document.getElementById(`item-back-${id}`).style.display='';
+    document.getElementById(`item-back-${id}`).onclick=()=>{ clearSizeSelect(id); document.getElementById(`cat-${id}`).value=''; document.getElementById(`cat-other-group-${id}`).style.display='none'; };
+    document.getElementById(`daimoku-group-${id}`).style.display='';
+    updateDaimokuStyle(id);
+    applyPendingSizeCarry(id);
+  }
+  else if(cat && itemData[cat]){
+    if(pendingSizeCarry[id]) showFreeSizeInput(id, ()=>populateSize(id, itemData[cat]));
+    else populateSize(id, itemData[cat]);
+  }
+}
+
+function onSubCatChange(id){
+  const sel=document.getElementById(`subcat-${id}`);
+  clearSizeSelect(id);
+  if(sel.value==='__other__'){
+    // サブカテゴリ自由入力
+    sel.style.display='none';
+    document.getElementById(`subcat-text-${id}`).style.display='';
+    document.getElementById(`subcat-back-${id}`).style.display='';
+    const itemSel=document.getElementById(`item-sel-${id}`);
+    itemSel.innerHTML='<option value="__other__">直接入力</option>';
+    itemSel.style.display='none';
+    document.getElementById(`item-lwh-${id}`).style.display='flex';
+    document.getElementById(`item-back-${id}`).style.display='none';
+    document.getElementById(`daimoku-group-${id}`).style.display='';
+    updateDaimokuStyle(id);
+    applyPendingSizeCarry(id);
+  } else if(sel.value && KOKI_DATA[sel.value]){
+    if(pendingSizeCarry[id]) showFreeSizeInput(id, ()=>populateSize(id, KOKI_DATA[sel.value]));
+    else populateSize(id, KOKI_DATA[sel.value]);
+  }
+}
+
+function clearSubcatOther(id){
+  const sel=document.getElementById(`subcat-${id}`);
+  sel.value=''; sel.style.display='';
+  document.getElementById(`subcat-text-${id}`).style.display='none';
+  document.getElementById(`subcat-text-${id}`).value='';
+  document.getElementById(`subcat-back-${id}`).style.display='none';
+  clearSizeSelect(id);
+}
+
+// 数字（サイズ）順にソートしてサイズ一覧を表示（「3000まで」「3001以上」用）
+function populateSizeSorted(id, list){
+  const arr=[...list];
+  arr.sort((a,b)=>{
+    if(a==='該当なし') return -1;
+    if(b==='該当なし') return 1;
+    const na=a.match(/\d+/g)||[]; const nb=b.match(/\d+/g)||[];
+    for(let i=0;i<Math.max(na.length,nb.length);i++){
+      const d=(parseInt(na[i])||0)-(parseInt(nb[i])||0);
+      if(d!==0) return d;
+    }
+    return 0;
+  });
+  populateSize(id, arr);
+}
+
+function populateSize(id, arr){
+  const sel=document.getElementById(`item-sel-${id}`);
+  sel.innerHTML='<option value="">-- 選択 --</option>';
+  // 「該当なし」は登録サイズが1件も無いことを示す内部用の目印であり、選択肢としては表示しない
+  arr.filter(v=>v!=='該当なし').forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  // 「自由入力」を末尾に追加
+  const o=document.createElement('option'); o.value='__other__'; o.textContent='その他（直接入力）'; sel.appendChild(o);
+}
+
+function clearSizeSelect(id){
+  const sel=document.getElementById(`item-sel-${id}`);
+  sel.innerHTML='<option value="">-- カテゴリを先に選択 --</option>';
+  // 台木リフト非表示
+  document.getElementById(`daimoku-group-${id}`).style.display='none';
+  // L/W/H入力を隠す
+  clearSizeOther(id);
+}
+
+function onSizeSelChange(id){
+  const sel=document.getElementById(`item-sel-${id}`);
+  if(sel.value==='__other__'){
+    sel.style.display='none';
+    document.getElementById(`item-lwh-${id}`).style.display='flex';
+    document.getElementById(`item-back-${id}`).style.display='';
+    document.getElementById(`item-l-${id}`).focus();
+    document.getElementById(`daimoku-group-${id}`).style.display='none';
+    applyPendingSizeCarry(id);
+  } else {
+    // 台木リフト表示
+    document.getElementById(`daimoku-group-${id}`).style.display = sel.value ? '' : 'none';
+    updateDaimokuStyle(id);
+  }
+}
+
+function clearSizeOther(id){
+  const sel=document.getElementById(`item-sel-${id}`);
+  sel.value=''; sel.style.display='';
+  document.getElementById(`item-lwh-${id}`).style.display='none';
+  document.getElementById(`item-l-${id}`).value='';
+  document.getElementById(`item-w-${id}`).value='';
+  document.getElementById(`item-h-${id}`).value='';
+  document.getElementById(`item-back-${id}`).style.display='none';
+  document.getElementById(`daimoku-group-${id}`).style.display='none';
+}
+
+function getSizeVal(id){
+  const sel=document.getElementById(`item-sel-${id}`);
+  const isOther = sel.style.display==='none' || sel.value==='__other__';
+  if(isOther){
+    const l=document.getElementById(`item-l-${id}`).value.trim();
+    const w=document.getElementById(`item-w-${id}`).value.trim();
+    const h=document.getElementById(`item-h-${id}`).value.trim();
+    if(!l && !w && !h) return '';
+    return `${l}×${w}×${h}`;
+  }
+  return sel.value;
+}
+
+function getSubcatVal(id){
+  const sel=document.getElementById(`subcat-${id}`);
+  const txt=document.getElementById(`subcat-text-${id}`);
+  if(!sel) return '';
+  if(sel.style.display==='none') return txt.value.trim();
+  return sel.value==='__other__'?txt.value.trim():sel.value;
+}
+
+function applyPendingSizeCarry(id){
+  const p = pendingSizeCarry[id];
+  if(!p) return;
+  document.getElementById(`item-l-${id}`).value = p.l;
+  document.getElementById(`item-w-${id}`).value = p.w;
+  document.getElementById(`item-h-${id}`).value = p.h;
+}
+
+function onSizeSearchInput(id){
+  const l=document.getElementById(`sizesearch-l-${id}`).value.trim();
+  const w=document.getElementById(`sizesearch-w-${id}`).value.trim();
+  const h=document.getElementById(`sizesearch-h-${id}`).value.trim();
+  const resultsEl=document.getElementById(`sizesearch-results-${id}`);
+  if(!l||!w||!h){ resultsEl.innerHTML=''; return; }
+  const sizePattern=/(\d+)\s*×\s*(\d+)\s*×\s*(\d+)/;
+  const matches=FLAT_SIZE_INDEX.filter(e=>{
+    const m=e.size.match(sizePattern);
+    if(!m) return false;
+    return m[1]===l && m[2]===w && m[3]===h;
+  });
+  if(!matches.length){
+    resultsEl.innerHTML='<div style="font-size:12px;color:#999">一致する候補がありません（カテゴリを選択し、サイズを直接入力してください。下の欄に自動で反映されます）</div>';
+    pendingSizeCarry[id] = {l,w,h};
+    return;
+  }
+  delete pendingSizeCarry[id];
+  resultsEl.innerHTML = matches.map((m,i)=>{
+    const label = m.cat==='工機' ? `工機_${m.subcat}` : (m.cat==='その他' ? m.subcat : m.cat);
+    return `<button type="button" class="btn-free" data-idx="${i}" style="display:block;width:100%;margin-bottom:4px;text-align:left" onclick="applySizeCandidate(${id},${i})">${label}　${m.size}</button>`;
+  }).join('');
+  resultsEl._matches = matches;
+}
+
+function applySizeCandidate(id, idx){
+  const resultsEl=document.getElementById(`sizesearch-results-${id}`);
+  const m = resultsEl._matches[idx];
+  const catSel=document.getElementById(`cat-${id}`);
+
+  if(m.cat==='その他'){
+    catSel.value = m.subcat; // '3000まで' or '3001以上'
+    onCatChange(id);
+  } else if(m.cat==='工機'){
+    catSel.value = '工機';
+    onCatChange(id);
+    const subSel=document.getElementById(`subcat-${id}`);
+    subSel.value = m.subcat;
+    onSubCatChange(id);
+  } else {
+    catSel.value = m.cat;
+    onCatChange(id);
+  }
+
+  const sizeSel=document.getElementById(`item-sel-${id}`);
+  sizeSel.value = m.size;
+  onSizeSelChange(id);
+
+  resultsEl.innerHTML='';
+  document.getElementById(`sizesearch-l-${id}`).value='';
+  document.getElementById(`sizesearch-w-${id}`).value='';
+  document.getElementById(`sizesearch-h-${id}`).value='';
+  delete pendingSizeCarry[id];
+}
+
+function updateDaimokuStyle(id){
+  const radios=document.querySelectorAll(`input[name="daimoku-${id}"]`);
+  radios.forEach(r=>{
+    const lbl=r.parentElement;
+    if(r.checked) lbl.classList.add('selected');
+    else lbl.classList.remove('selected');
+  });
+}
+
+function getDaimoku(id){
+  const r=document.querySelector(`input[name="daimoku-${id}"]:checked`);
+  return r?r.value:'なし';
+}
+
+function getUrgent(id){
+  const el=document.getElementById(`urgent-${id}`);
+  return el ? el.checked : false;
+}
+
+function collectItems(){
+  const blocks=document.querySelectorAll('.item-block');
+  const items=[];
+  blocks.forEach(block=>{
+    const id=block.id.replace('item-','');
+    const catSel=document.getElementById(`cat-${id}`);
+    let cat=catSel.value;
+    let catDisplay=cat;
+    let isPendingCat=false;
+    if(cat==='工機'){
+      const sub=getSubcatVal(id);
+      catDisplay=sub?`工機_${sub}`:'工機';
+    } else if(cat==='__other__'){
+      const otherText = document.getElementById(`cat-other-text-${id}`);
+      const normalized = otherText ? normalizeFreeText(otherText.value) : '';
+      catDisplay = normalized ? normalized : 'その他';
+      isPendingCat = true;
+    } else if(cat.startsWith('pending:')){
+      const pid = cat.slice('pending:'.length);
+      const found = PENDING_CATEGORIES.find(p=>String(p.id)===pid);
+      catDisplay = found ? found.category_name : '';
+      isPendingCat = true;
+    }
+    const sizeVal=getSizeVal(id);
+    const daimoku=getDaimoku(id);
+    const urgent=getUrgent(id);
+    const client=getClientVal(id);
+    const team=getTeamVal(id);
+    const isNew = document.getElementById(`item-lwh-${id}`).style.display !== 'none';
+    const dates=[];
+    const dateInputs=block.querySelectorAll('.date-input');
+    const qtyInputs=block.querySelectorAll('.qty-input');
+    dateInputs.forEach((d,i)=>{ if(d.value||qtyInputs[i].value) dates.push({date:d.value,qty:qtyInputs[i].value}); });
+    items.push({cat:catDisplay,size:sizeVal,daimoku,urgent,client,team,dates,isNew,isPendingCat});
+  });
+  return items;
+}
+
+function goConfirm(){
+  const requester=currentUser.name;
+  const items=collectItems();
+  if(!items.length){ showMsg('品目を1つ以上追加してください。','err'); return; }
+  let valid=true;
+  items.forEach((it,i)=>{
+    if(!it.cat||it.cat==='工機'){ valid=false; showMsg(`品目${i+1}：カテゴリを選択してください。`,'err'); }
+    if(!it.size){ valid=false; showMsg(`品目${i+1}：サイズを選択または入力してください。`,'err'); }
+    if(!it.dates.length||!it.dates[0].date||!it.dates[0].qty){ valid=false; showMsg(`品目${i+1}：納入日と数量を入力してください。`,'err'); }
+    if(!it.team){ valid=false; showMsg(`品目${i+1}：班を選択してください。`,'err'); }
+  });
+  if(!valid) return;
+
+  const hasWeekend = items.some(it => it.dates.some(d => {
+    if(!d.date) return false;
+    const dow = new Date(d.date + 'T00:00:00').getDay();
+    return dow === 0 || dow === 6;
+  }));
+  if(hasWeekend){
+    if(!confirm('土日が選択されています。よろしいですか？')) return;
+  }
+
+  const note=document.getElementById('note').value;
+  const bikoTargetVal = document.getElementById('biko-target').value;
+  const bikoTargetLabel = bikoTargetVal === 'all' ? '全品目共通' : `品目${bikoTargetVal}のみ`;
+  window._bikoTarget = bikoTargetVal;
+
+  let html=`
+    <div class="card">
+      <table class="confirm-table">
+        <tr><th>依頼者名</th><td><input type="text" id="c-requester" value="${requester}" readonly></td></tr>
+      </table>
+    </div>`;
+
+  items.forEach((it,i)=>{
+    const dateRows=it.dates.map((d,j)=>`
+      <tr>
+        <th>納入日${j+1}・数量</th>
+        <td style="display:flex;gap:6px;align-items:center">
+          <input type="date" class="c-date-${i}" value="${d.date}" style="flex:1">
+          <input type="number" class="c-qty-${i}" value="${d.qty}" min="1" style="width:70px"> c/s
+        </td>
+      </tr>`).join('');
+    html+=`
+      <div class="item-confirm-block">
+        <div style="font-size:12px;font-weight:bold;color:#2c5282;margin-bottom:8px">品目 ${i+1}</div>
+        <table class="confirm-table">
+          <tr><th>客先名</th><td><input type="text" id="c-client-${i}" value="${it.client}"></td></tr>
+          <tr><th>班</th><td><select id="c-team-${i}">${TEAMS.map(t=>`<option value="${t.id}" ${t.id===it.team?'selected':''}>${escapeHtml(t.team_name)}</option>`).join('')}</select></td></tr>
+          <tr><th>カテゴリ</th><td><input type="text" id="c-cat-${i}" value="${it.cat}"></td></tr>
+          <tr><th>サイズ</th><td><input type="text" id="c-size-${i}" value="${it.size}"></td></tr>
+          <tr><th>台木リフト</th><td><input type="text" id="c-daimoku-${i}" value="${it.daimoku}"></td></tr>
+          <tr><th>急ぎ</th><td><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="c-urgent-${i}" ${it.urgent ? 'checked' : ''} style="width:auto">急ぎ（当日納入も可）</label></td></tr>
+          ${dateRows}
+        </table>
+      </div>`;
+  });
+
+  html+=`
+    <div class="card">
+      <table class="confirm-table">
+        <tr><th>備考の対象</th><td>${bikoTargetLabel}</td></tr>
+        <tr><th>備考</th><td><textarea id="c-note" rows="3" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit">${note}</textarea></td></tr>
+      </table>
+    </div>`;
+
+  document.getElementById('confirm-content').innerHTML=html;
+  document.getElementById('input-screen').style.display='none';
+  document.getElementById('confirm-screen').style.display='block';
+  document.getElementById('confirm-btns').style.display='grid';
+  document.getElementById('after-send-btns').style.display='none';
+  document.getElementById('msg2').textContent='';
+  document.getElementById('msg2').className='';
+  window._confirmItemCount=items.length;
+  window._confirmItems=items;
+  window.scrollTo(0,0);
+}
+
+function goBack(){
+  document.getElementById('confirm-screen').style.display='none';
+  document.getElementById('input-screen').style.display='block';
+  window.scrollTo(0,0);
+}
+
+// "L×W×H" のような文字列から末尾の数値3つを取り出す（「その他」カテゴリの
+// 「680K　2800×1150×1125」のような品名付き表記にも対応するため、最後に出てくる
+// パターンを採用する）
+function parseSizeLWH(str){
+  const matches = [...String(str).matchAll(/(\d+)\s*×\s*(\d+)\s*×\s*(\d+)/g)];
+  if(!matches.length) return [null,null,null];
+  const last = matches[matches.length-1];
+  return [parseInt(last[1],10), parseInt(last[2],10), parseInt(last[3],10)];
+}
+
+// 「ﾄﾗﾝｽﾌｧｰ　2250×1150×2540」のような選択肢から、サイズ数字より前の品名部分だけを取り出す。
+// 品名が付いていない（数字だけの）選択肢の場合は null を返す。
+function parseItemNamePrefix(str){
+  const s = String(str);
+  const m = s.match(/\d+\s*×\s*\d+\s*×\s*\d+/);
+  if(!m) return s.trim() || null;
+  const prefix = s.slice(0, m.index).trim();
+  return prefix || null;
+}
+
+async function submitForm(){
+  const btn=document.getElementById('btn-send');
+
+  const requester=document.getElementById('c-requester').value;
+  const note=document.getElementById('c-note').value;
+  const n=window._confirmItemCount;
+  const bikoTarget = window._bikoTarget || 'all';
+
+  const items=[];
+  for(let i=0;i<n;i++){
+    const client = document.getElementById(`c-client-${i}`).value;
+    const team = document.getElementById(`c-team-${i}`).value;
+    const cat = normalizeFreeText(document.getElementById(`c-cat-${i}`).value);
+    const size = document.getElementById(`c-size-${i}`).value;
+    const daimoku = document.getElementById(`c-daimoku-${i}`).value;
+    const urgentEl = document.getElementById(`c-urgent-${i}`);
+    const urgent = urgentEl ? urgentEl.checked : false;
+    const dates=[];
+    const dateEls=document.querySelectorAll(`.c-date-${i}`);
+    const qtyEls=document.querySelectorAll(`.c-qty-${i}`);
+    dateEls.forEach((d,j)=>{ dates.push({date:d.value, qty: parseInt(qtyEls[j].value,10)}); });
+    const isNew = (window._confirmItems && window._confirmItems[i]) ? window._confirmItems[i].isNew : false;
+    const isPendingCat = (window._confirmItems && window._confirmItems[i]) ? window._confirmItems[i].isPendingCat : false;
+    items.push({client, team, cat, size, daimoku, urgent, dates, isNew, isPendingCat});
+  }
+
+  const minDate = minAllowedDateStr();
+  for(const it of items){
+    if(it.urgent) continue;
+    for(const d of it.dates){
+      if(d.date && d.date < minDate){
+        document.getElementById('msg2').className='err';
+        document.getElementById('msg2').textContent=`❌ 納入日は中3日ルールにより${minDate}以降を指定してください（急ぎの場合は急ぎフラグをONにしてください）`;
+        return;
+      }
+    }
+  }
+
+  btn.disabled=true; btn.textContent='送信中...';
+
+  try{
+    // 仮カテゴリ（新カテゴリ・承認待ち）の解決：既存名なら再利用、なければ新規作成してIDを払い出す
+    const pendingCategoryIdMap = {};
+    for(const it of items){
+      if(!it.isPendingCat) continue;
+      if(Object.prototype.hasOwnProperty.call(pendingCategoryIdMap, it.cat)) continue;
+
+      const { data: existing, error: findErr } = await sbClient
+        .from('pending_categories')
+        .select('id')
+        .eq('category_name', it.cat)
+        .maybeSingle();
+      if(findErr) throw findErr;
+
+      if(existing){
+        pendingCategoryIdMap[it.cat] = existing.id;
+        continue;
+      }
+
+      const { data: created, error: insErr } = await sbClient
+        .from('pending_categories')
+        .insert({ category_name: it.cat })
+        .select('id')
+        .single();
+
+      if(insErr){
+        // 同時送信などで既に他の依頼が同名を作成していた場合は、再取得して救済する
+        const { data: retryRow, error: retryErr } = await sbClient
+          .from('pending_categories')
+          .select('id')
+          .eq('category_name', it.cat)
+          .maybeSingle();
+        if(retryErr || !retryRow) throw insErr;
+        pendingCategoryIdMap[it.cat] = retryRow.id;
+      } else {
+        pendingCategoryIdMap[it.cat] = created.id;
+      }
+    }
+
+    const { data: reqRow, error: reqErr } = await sbClient
+      .from('requests')
+      .insert({
+        requester_email: currentUser.email,
+        requester_name: requester,
+        note_common: note,
+        submission_token: crypto.randomUUID()
+      })
+      .select()
+      .single();
+    if(reqErr) throw reqErr;
+
+    const itemsPayload = items.map((it,i)=>{
+      const [l,w,h] = parseSizeLWH(it.size);
+      return {
+        request_id: reqRow.id,
+        client_name: it.client || null,
+        team_id: it.team || null,
+        category: it.cat,
+        item_name: parseItemNamePrefix(it.size),
+        size_l: l, size_w: w, size_h: h,
+        daimoku_lift: it.daimoku === 'あり',
+        is_urgent: it.urgent,
+        note_item: (bikoTarget === 'all' || parseInt(bikoTarget,10) === i+1) ? (note || null) : null,
+        is_new_size: it.isNew,
+        pending_category_id: it.isPendingCat ? (pendingCategoryIdMap[it.cat] || null) : null,
+        status: '受付済み'
+      };
+    });
+    const { data: insertedItems, error: itemsErr } = await sbClient
+      .from('request_items')
+      .insert(itemsPayload)
+      .select();
+    if(itemsErr) throw itemsErr;
+
+    const datesPayload = [];
+    items.forEach((it,i)=>{
+      it.dates.forEach(d=>{
+        if(!d.date || !d.qty) return;
+        datesPayload.push({
+          request_item_id: insertedItems[i].id,
+          delivery_date: d.date,
+          qty: d.qty,
+          is_urgent: it.urgent
+        });
+      });
+    });
+    const { error: datesErr } = await sbClient.from('request_item_dates').insert(datesPayload);
+    if(datesErr) throw datesErr;
+
+    {
+      let html='<p style="text-align:center;font-size:16px;color:#276749;padding:30px 30px 10px">✅ 送信が完了しました！（受付番号：' + reqRow.receipt_no + '）</p>';
+
+      // 新サイズ（仕組オーダーシート対象）を除いた品目に、よく使うサイズ登録用の星ボタンを表示する
+      const favEligibleItems = items
+        .map((it, i) => ({ ...it, requestItemId: insertedItems[i].id }))
+        .filter(it => !it.isNew);
+      window._favEligibleItems = favEligibleItems;
+      if(favEligibleItems.length){
+        const rowsHtml = favEligibleItems.map((it, idx) => {
+          const isFav = FAVORITES.some(f => f.category === it.cat && f.size === it.size && f.daimoku_lift === (it.daimoku === 'あり'));
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid #eee;font-size:13px">
+            <span>${escapeHtml(it.cat)}　${escapeHtml(it.size)}${it.daimoku==='あり' ? '（台木リフトあり）' : ''}</span>
+            <button type="button" id="fav-star-${idx}" onclick="toggleFavoriteFromResult(${idx})" style="border:none;background:none;font-size:20px;cursor:pointer;color:${isFav ? '#f6ad55' : '#ccc'}">★</button>
+          </div>`;
+        }).join('');
+        html += `
+          <div class="card">
+            <div style="font-size:13px;font-weight:bold;color:#555;margin-bottom:6px">よく使うサイズに登録する</div>
+            ${rowsHtml}
+          </div>`;
+      }
+
+      const newItemsWithId = items
+        .map((it, i) => ({ ...it, requestItemId: insertedItems[i].id }))
+        .filter(it => it.isNew);
+      window._shikumiBatch = null;
+      if(newItemsWithId.length){
+        const batchId = 'sb' + Date.now();
+        localStorage.setItem('shikumi_batch_' + batchId, JSON.stringify([]));
+        window._shikumiBatch = { id: batchId, total: newItemsWithId.length };
+
+        const linksHtml=newItemsWithId.map((it,idx)=>{
+          const q=new URLSearchParams();
+          q.set('request_item_id', it.requestItemId);
+          q.set('batch', batchId);
+          q.set('idx', String(idx));
+          q.set('total', String(newItemsWithId.length));
+          return `<li style="margin-bottom:8px">
+            ${it.cat}　${it.size}<br>
+            <a href="${SHIKUMI_FORM_URL}?${q.toString()}" target="_blank"
+               style="display:inline-block;margin-top:4px;padding:5px 10px;background:#856404;color:#fff;border-radius:4px;text-decoration:none;font-size:12px">
+              🔧 仕組オーダーシートを開く
+            </a>
+          </li>`;
+        }).join('');
+        html+=`
+          <div id="shikumi-notice" style="margin:0 0 20px;padding:12px 14px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;font-size:13px;color:#856404;line-height:1.6">
+            ⚠️ ${newItemsWithId.length}件の新サイズがあります。仕組オーダーシートを入力・送信してください。
+            <ul style="margin:6px 0 0 18px;list-style:none;padding:0">${linksHtml}</ul>
+          </div>`;
+      }
+
+      document.getElementById('confirm-content').innerHTML=html;
+      document.getElementById('msg2').className='';
+      document.getElementById('msg2').textContent='';
+      document.getElementById('confirm-btns').style.display='none';
+      document.getElementById('after-send-btns').style.display='grid';
+      checkShikumiBatchProgress();
+      // btn-sendをリセット（続けて送信用）
+      btn.disabled=false; btn.textContent='送信する';
+    }
+  } catch(err) {
+    document.getElementById('msg2').className='err';
+    document.getElementById('msg2').textContent='❌ 送信に失敗しました。もう一度お試しください。（' + (err && err.message ? err.message : '') + '）';
+    btn.disabled=false; btn.textContent='送信する';
+  }
+}
+
+// 送信完了画面の星ボタン：タップで即時登録／解除する
+async function toggleFavoriteFromResult(idx){
+  const it = window._favEligibleItems && window._favEligibleItems[idx];
+  if(!it) return;
+  const btn = document.getElementById(`fav-star-${idx}`);
+  const daimoku_lift = it.daimoku === 'あり';
+  const existing = FAVORITES.find(f => f.category === it.cat && f.size === it.size && f.daimoku_lift === daimoku_lift);
+
+  if(existing){
+    const { error } = await sbClient.from('favorite_sizes').delete().eq('id', existing.id);
+    if(error){ alert('解除に失敗しました：' + error.message); return; }
+    FAVORITES = FAVORITES.filter(f => f.id !== existing.id);
+    if(btn) btn.style.color = '#ccc';
+    return;
+  }
+
+  if(FAVORITES.length >= 10){
+    showFavoriteLimitPicker(idx);
+    return;
+  }
+
+  const { data, error } = await sbClient
+    .from('favorite_sizes')
+    .insert({ requester_email: currentUser.email, category: it.cat, size: it.size, daimoku_lift })
+    .select('id, category, size, daimoku_lift')
+    .single();
+  if(error){ alert('登録に失敗しました：' + error.message); return; }
+  FAVORITES.push(data);
+  if(btn) btn.style.color = '#f6ad55';
+}
+
+// 上限10件に達している場合、現在の10件を一覧表示し、どれを外すか選ばせる
+function showFavoriteLimitPicker(idx){
+  const overlay = document.createElement('div');
+  overlay.id = 'fav-limit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px';
+  const listHtml = FAVORITES.map(f => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:13px">
+      <span>${escapeHtml(f.category)}　${escapeHtml(f.size)}${f.daimoku_lift ? '（台木リフトあり）' : ''}</span>
+      <button type="button" class="btn-free" onclick="replaceFavorite('${f.id}', ${idx})">これを外す</button>
+    </div>`).join('');
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:18px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto">
+      <div style="font-weight:bold;margin-bottom:10px;font-size:14px">よく使うサイズは10件までです。外すものを選んでください</div>
+      ${listHtml}
+      <button type="button" class="btn-back" style="margin-top:10px;width:100%" onclick="document.getElementById('fav-limit-overlay').remove()">キャンセル</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// 選んだお気に入りを外し、代わりに今回の品目を登録する
+async function replaceFavorite(removeId, idx){
+  const it = window._favEligibleItems && window._favEligibleItems[idx];
+  if(!it) return;
+
+  const { error: delErr } = await sbClient.from('favorite_sizes').delete().eq('id', removeId);
+  if(delErr){ alert('削除に失敗しました：' + delErr.message); return; }
+  FAVORITES = FAVORITES.filter(f => f.id !== removeId);
+
+  const daimoku_lift = it.daimoku === 'あり';
+  const { data, error: insErr } = await sbClient
+    .from('favorite_sizes')
+    .insert({ requester_email: currentUser.email, category: it.cat, size: it.size, daimoku_lift })
+    .select('id, category, size, daimoku_lift')
+    .single();
+  if(insErr){ alert('登録に失敗しました：' + insErr.message); return; }
+  FAVORITES.push(data);
+
+  const overlay = document.getElementById('fav-limit-overlay');
+  if(overlay) overlay.remove();
+  const btn = document.getElementById(`fav-star-${idx}`);
+  if(btn) btn.style.color = '#f6ad55';
+}
+
+function continueForm(){
+  // フォームをリセットして入力画面に戻る
+  window._shikumiBatch = null;
+  document.getElementById('note').value='';
+  document.getElementById('items-container').innerHTML='';
+  Object.keys(pendingSizeCarry).forEach(k=>delete pendingSizeCarry[k]);
+  itemCount=0;
+  addItem();
+  document.getElementById('confirm-screen').style.display='none';
+  document.getElementById('input-screen').style.display='block';
+  document.getElementById('confirm-btns').style.display='grid';
+  document.getElementById('after-send-btns').style.display='none';
+  document.getElementById('msg').textContent='';
+  document.getElementById('msg').className='';
+  window.scrollTo(0,0);
+}
+
+function closeForm(){
+  window._shikumiBatch = null;
+  // スマホではwindow.close()が効かないためトップに戻す
+  if(!window.close()){
+    document.getElementById('confirm-screen').style.display='none';
+    document.getElementById('input-screen').style.display='block';
+    document.getElementById('confirm-btns').style.display='grid';
+    document.getElementById('after-send-btns').style.display='none';
+    document.getElementById('items-container').innerHTML='';
+    Object.keys(pendingSizeCarry).forEach(k=>delete pendingSizeCarry[k]);
+    itemCount=0; addItem();
+    document.getElementById('note').value='';
+    document.getElementById('msg').textContent='';
+    window.scrollTo(0,0);
+    showMsg('送信が完了しました。続けて入力できます。','ok');
+  }
+}
+
+function showMsg(text,type){
+  const m=document.getElementById('msg');
+  m.className=type; m.textContent=text;
+}
+
+// =============================================
+// Supabase（size_master・clients_master）からマスタデータを一括取得し、
+// itemData / KOKI_DATA / CLIENTS を組み立てる
+// =============================================
+async function loadMasters(){
+  const { data: sizeRows, error: sizeErr } = await sbClient
+    .from('size_master')
+    .select('category, subcategory, size');
+  if(sizeErr){
+    showMsg('サイズ一覧の取得に失敗しました。時間をおいて再度お試しください。','err');
+  } else {
+    const built = {};
+    const koki = {};
+    (sizeRows || []).forEach(row=>{
+      if(row.category === '工機'){
+        if(!koki[row.subcategory]) koki[row.subcategory] = ['該当なし'];
+        koki[row.subcategory].push(row.size);
+      } else if(row.subcategory){
+        if(!built[row.category]) built[row.category] = {};
+        if(!built[row.category][row.subcategory]) built[row.category][row.subcategory] = ['該当なし'];
+        built[row.category][row.subcategory].push(row.size);
+      } else {
+        if(!built[row.category]) built[row.category] = ['該当なし'];
+        built[row.category].push(row.size);
+      }
+    });
+    itemData = built;
+    KOKI_DATA = koki;
+    rebuildFlatIndex();
+  }
+
+  const { data: clientRows, error: clientErr } = await sbClient
+    .from('clients_master')
+    .select('name')
+    .order('name');
+  if(!clientErr && clientRows){
+    CLIENTS = clientRows.map(r=>r.name);
+  }
+
+  const { data: teamRows, error: teamErr } = await sbClient
+    .from('team_master')
+    .select('id, team_name')
+    .eq('is_hidden', false)
+    .order('sort_order');
+  if(!teamErr && teamRows){
+    TEAMS = teamRows;
+  }
+
+  // 営業日の例外（祝日・土曜出勤など）を読み込み、中3日の計算に反映する
+  try{
+    const todayStr = ymdOf(new Date());
+    const { data: excRows, error: excErr } = await sbClient
+      .from('business_day_exceptions')
+      .select('exception_date, is_business_day')
+      .gte('exception_date', todayStr);
+    if(!excErr && excRows){
+      BUSINESS_EXC = {};
+      excRows.forEach(r=>{ BUSINESS_EXC[r.exception_date] = r.is_business_day; });
+      refreshAllDateMins();
+    }
+  }catch(e){ /* 読み込み失敗時は土日のみ休業として計算する */ }
+
+  const { data: pendingRows, error: pendingErr } = await sbClient
+    .from('pending_categories')
+    .select('id, category_name')
+    .eq('status', 'pending')
+    .order('category_name');
+  if(!pendingErr && pendingRows){
+    PENDING_CATEGORIES = pendingRows;
+  }
+
+  const { data: favRows, error: favErr } = await sbClient
+    .from('favorite_sizes')
+    .select('id, category, size, daimoku_lift')
+    .eq('requester_email', currentUser.email)
+    .order('created_at');
+  if(!favErr && favRows){
+    FAVORITES = favRows;
+  }
+}
+
+// =============================================
+// Googleログイン処理
+// =============================================
+async function loginWithGoogle(){
+  const { error } = await sbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error){
+    document.getElementById('auth-msg').textContent = 'ログインに失敗しました：' + error.message;
+  }
+}
+
+// =============================================
+// 起動処理：ログイン状態を確認し、許可リストと照合してからフォームを表示する
+// =============================================
+async function initAuth(){
+  const { data: { user } } = await sbClient.auth.getUser();
+
+  if(!user){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-login').style.display='block';
+    return;
+  }
+
+  const { data: allowRow, error: allowErr } = await sbClient
+    .from('users_allowlist')
+    .select('name, role')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if(allowErr || !allowRow || !allowRow.name){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-denied').style.display='block';
+    return;
+  }
+
+  currentUser.email = user.email;
+  currentUser.name = allowRow.name;
+
+  await loadMasters();
+
+  document.getElementById('login-name-display').textContent = currentUser.name;
+  document.getElementById('auth-loading').style.display='none';
+  document.getElementById('app-content').style.display='block';
+  addItem();
+  renderFooterNav('依頼者', 'form');
+}
+
+// =============================================
+// 仕組オーダーシートの一括送信の進捗を確認し、
+// 全件送信済みになるまで「続けて依頼する」「閉じる」をブロックする
+// =============================================
+function checkShikumiBatchProgress(){
+  const contBtn = document.getElementById('btn-continue-form');
+  const closeBtn = document.getElementById('btn-close-form');
+  const progressEl = document.getElementById('shikumi-progress');
+
+  if(!window._shikumiBatch){
+    if(contBtn) contBtn.disabled = false;
+    if(closeBtn) closeBtn.disabled = false;
+    if(progressEl) progressEl.textContent = '';
+    return;
+  }
+
+  const { id, total } = window._shikumiBatch;
+  let doneArr = [];
+  try{ doneArr = JSON.parse(localStorage.getItem('shikumi_batch_' + id) || '[]'); }catch(e){ doneArr = []; }
+  const doneCount = doneArr.length;
+
+  if(doneCount >= total){
+    if(contBtn) contBtn.disabled = false;
+    if(closeBtn) closeBtn.disabled = false;
+    if(progressEl) progressEl.textContent = '';
+    const notice = document.getElementById('shikumi-notice');
+    if(notice) notice.remove();
+  } else {
+    if(contBtn) contBtn.disabled = true;
+    if(closeBtn) closeBtn.disabled = true;
+    if(progressEl) progressEl.textContent = `未送信の仕組オーダーシートがあります（${doneCount}/${total}件送信済み）`;
+  }
+}
+
+// 仕組オーダーシート（別タブ）で送信が完了するたびに進捗を再チェックする
+window.addEventListener('storage', function(e){
+  if(e.key === 'shikumi_done' || (e.key && e.key.indexOf('shikumi_batch_') === 0)){
+    checkShikumiBatchProgress();
+  }
+});
+
+// =============================================
+// 共通フッターナビ（依頼者・作業者はタブバー／管理者はホームへ戻るリンク）
+// =============================================
+(function(){
+  const style = document.createElement('style');
+  style.textContent = `
+.footer-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(255,255,255,0.96);backdrop-filter:blur(6px);border-top:1px solid #E4E7EC;padding:7px 4px calc(13px + env(safe-area-inset-bottom));font-family:'M PLUS Rounded 1c',sans-serif;}
+.footer-tabbar .ftab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#A2A8B3;text-decoration:none;font-size:9px;font-weight:700;cursor:pointer;background:none;border:none;font-family:inherit;}
+.footer-tabbar .ftab svg{width:20px;height:20px;}
+.footer-tabbar .ftab.active{color:#1E3766;}
+.footer-back-link{position:fixed;top:14px;left:14px;z-index:40;display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #E4E7EC;border-radius:999px;padding:7px 14px 7px 10px;font-size:12px;font-weight:700;color:#1E3766;text-decoration:none;box-shadow:0 6px 14px rgba(20,22,26,0.08);font-family:'M PLUS Rounded 1c',sans-serif;}
+`;
+  document.head.appendChild(style);
+})();
+
+const FNAV_ICONS = {
+  home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/>',
+  form: '<path d="M4 3h13l4 4v14a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  stock: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>',
+  user: '<circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4.2-6 7-6s5.8 2 7 6"/>',
+  wrench: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.6-.6-.6-2.6z"/>',
+  doc: '<path d="M6 3h9l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h3M8 16h6M8 10h2"/>',
+  back: '<path d="M19 12H5M11 18l-6-6 6-6"/>'
+};
+function fIcon(name){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${FNAV_ICONS[name]}</svg>`;
+}
+
+function renderFooterNav(role, activeKey){
+  const NAV_URLS = {
+    home: 'home.html', form: 'formB_size.html', mypage: 'mypage.html',
+    stock: 'stock_view.html', workCalendar: 'work_calendar.html', requestCalendar: 'request_calendar.html'
+  };
+
+  if(role === '管理者'){
+    const back = document.createElement('a');
+    back.href = NAV_URLS.home;
+    back.className = 'footer-back-link';
+    back.innerHTML = fIcon('back') + '<span>ホームへ</span>';
+    document.body.appendChild(back);
+    return;
+  }
+
+  const bar = document.createElement('div');
+  bar.className = 'footer-tabbar';
+
+  if(role === '作業者'){
+    bar.innerHTML = `
+      <a class="ftab ${activeKey==='home'?'active':''}" href="${NAV_URLS.home}">${fIcon('home')}<span>ホーム</span></a>
+      <button class="ftab" onclick="alert('準備中の機能です。')">${fIcon('wrench')}<span>作業工程</span></button>
+      <a class="ftab ${activeKey==='workCalendar'?'active':''}" href="${NAV_URLS.workCalendar}">${fIcon('calendar')}<span>カレンダー</span></a>
+      <button class="ftab" onclick="alert('準備中の機能です。')">${fIcon('doc')}<span>手順書</span></button>
+      <a class="ftab ${activeKey==='stock'?'active':''}" href="${NAV_URLS.stock}">${fIcon('stock')}<span>在庫</span></a>`;
+  } else {
+    bar.innerHTML = `
+      <a class="ftab ${activeKey==='home'?'active':''}" href="${NAV_URLS.home}">${fIcon('home')}<span>ホーム</span></a>
+      <a class="ftab ${activeKey==='form'?'active':''}" href="${NAV_URLS.form}">${fIcon('form')}<span>依頼</span></a>
+      <a class="ftab ${activeKey==='requestCalendar'?'active':''}" href="${NAV_URLS.requestCalendar}">${fIcon('calendar')}<span>カレンダー</span></a>
+      <a class="ftab ${activeKey==='stock'?'active':''}" href="${NAV_URLS.stock}">${fIcon('stock')}<span>在庫</span></a>
+      <a class="ftab ${activeKey==='mypage'?'active':''}" href="${NAV_URLS.mypage}">${fIcon('user')}<span>マイページ</span></a>`;
+  }
+
+  document.body.appendChild(bar);
+  document.body.style.paddingBottom = '68px';
+}
+
+initAuth();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("service-worker.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

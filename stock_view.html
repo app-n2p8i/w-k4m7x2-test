@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在庫表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic',YuGothic,sans-serif;background:#e2e6ec;color:#333;min-height:100vh}
+.container{max-width:720px;margin:24px auto;padding:0 12px 40px}
+h1{font-size:18px;font-weight:bold;color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:8px;margin-bottom:20px}
+
+.login-box{max-width:360px;margin:80px auto;text-align:center}
+.login-box h1{border:none;margin-bottom:20px}
+.btn-google{padding:13px 24px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-google:hover{background:#2c5282}
+#auth-loading{text-align:center;padding:60px 0;color:#666;font-size:14px}
+.login-name-bar{font-size:12px;color:#555;background:#eef3f8;padding:8px 12px;border-radius:6px;margin-bottom:14px}
+
+.lock-banner{font-size:13px;color:#856404;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 12px;margin-bottom:14px;text-align:center;display:none}
+.lock-banner.show{display:block}
+
+.delivery-mode-row{display:none;align-items:center;justify-content:space-between;background:#eef3f8;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:13px;font-weight:bold;color:#1a3a5c}
+.notif-toggle{position:relative;width:40px;height:22px;flex-shrink:0;display:inline-block}
+.notif-toggle input{opacity:0;width:0;height:0}
+.notif-toggle .track{position:absolute;inset:0;background:#D8DCE1;border-radius:999px;transition:.15s;cursor:pointer}
+.notif-toggle .track::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.notif-toggle input:checked + .track{background:#2A4B8D}
+.notif-toggle input:checked + .track::before{transform:translateX(18px)}
+
+.first-wave-badge{display:block;background:#2A4B8D;color:#fff;font-size:9px;font-weight:bold;line-height:1;border-radius:3px;padding:2px 4px}
+
+/* ---- PC幅（管理者がPCで開いた時のみ）：共通品・個人依頼品を横並びに ---- */
+.stock-section{min-width:0}
+@media (min-width:900px){
+  .container{max-width:1800px}
+  .stock-sections-wrap{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+}
+.section-label{font-size:13px;font-weight:bold;color:#1a3a5c;margin:18px 0 8px}
+.section-label:first-of-type{margin-top:0}
+
+/* ---- 台帳テーブル共通 ---- */
+.ledger-table{background:#fff;border:2px solid #2b3a4a;border-radius:10px;overflow:hidden}
+.ledger-head{display:grid;align-items:center;padding:8px 10px;background:#d7e0f2;font-size:10px;font-weight:bold;color:#1a3a5c}
+.ledger-head span{text-align:center}
+.ledger-head span:first-child{text-align:left}
+
+/* 個人依頼品：発注/日付/品目(サイズ)/数量/依頼者 */
+.ledger-head.indiv-head{grid-template-columns:52px 40px 1fr 46px 56px}
+.indiv-row{display:grid;grid-template-columns:52px 40px 1fr 46px 56px;align-items:center;gap:4px;padding:9px 8px;border-top:1px solid #ccd3dc}
+.indiv-row:first-of-type{border-top:none}
+.indiv-row.is-cancelled{opacity:.55}
+.indiv-row.hidden-item{background:#fff4e5}
+.hidden-badge{display:inline-block;margin-left:6px;font-size:11px;font-weight:bold;color:#a15c00;background:#ffe1b3;border-radius:4px;padding:1px 5px}
+.ir-date{font-size:10.5px;color:#4a4a4a;text-align:center}
+.ir-main{min-width:0}
+.ir-name{font-size:12px;font-weight:bold;color:#1a3a5c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir-team{font-weight:bold;font-size:9.5px;color:#fff;background:#6a4fa8;padding:1px 6px;border-radius:999px;margin-right:4px;display:inline-block}
+.urgent-tag{font-size:8px;font-weight:bold;color:#fff;background:#c4531f;padding:1.5px 5.5px;border-radius:999px;margin-left:4px}
+.ir-size{font-size:12.5px;font-weight:600;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir-qty{font-size:14px;font-weight:bold;text-align:center;color:#1a3a5c}
+.ir-requester{font-size:10.5px;color:#444;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir-cell{display:flex;flex-direction:column;align-items:center;gap:2px}
+
+/* 共通品：品目/在庫/班ごと */
+.common-table-wrap{overflow-x:auto}
+.ledger-row.common{display:grid;align-items:center;gap:4px;padding:9px 10px;border-top:1px solid #ccd3dc}
+.ledger-row.common:first-of-type{border-top:none}
+.cm-name{font-size:12px;font-weight:bold;color:#1a3a5c;display:flex;align-items:center;gap:5px}
+.min-line-edit-btn{appearance:none;border:1px solid #ccc;background:#fff;color:#888;border-radius:5px;width:18px;height:18px;font-size:10px;line-height:1;cursor:pointer;flex-shrink:0;padding:0}
+.min-line-edit-btn:active{background:#eef3f8}
+.cm-stock{font-size:13.5px;font-weight:600;text-align:center;color:#222}
+.cm-stock.low{color:#c53030;font-weight:bold}
+.cm-stock.clickable{cursor:pointer;text-decoration:underline dotted}
+.cm-cell{display:flex;flex-direction:column;align-items:center;gap:2px}
+
+/* 発注欄フィールド */
+.order-field{appearance:none;cursor:pointer;font-weight:bold;border-radius:8px;padding:5px 9px;font-size:15px;min-width:34px;text-align:center;background:#fff;border:2px solid #b8b8b8;color:#1a3a5c;display:flex;align-items:center;justify-content:center;line-height:1.3}
+.order-field.empty{color:#bbb;border-style:dashed;font-weight:normal}
+.order-field.date-mode{font-size:11px}
+.color-row{display:flex;flex-wrap:wrap;gap:8px}
+.color-opt{display:flex;align-items:center;gap:5px;padding:5px 9px;border:2px solid #ddd;border-radius:8px;cursor:pointer;font-size:14px}
+.color-opt.selected{border-color:#1a3a5c;background:#eef3f8}
+.color-opt input{position:absolute;opacity:0;width:0;height:0}
+.color-swatch{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #999}
+.order-circle-dot{display:inline-block;width:13px;height:13px;border-radius:50%;border:2.5px solid #1a3a5c;box-sizing:border-box}
+.order-field.disabled{opacity:.5;cursor:not-allowed}
+.order-field.mark-prep{background:#fbdce4;border-color:#e79ab0;color:#8a3a52}
+.order-field.mark-delivered{background:#d8dadd;border-color:#a9adb3;color:#5a5e64}
+.order-field.mark-prep.empty,.order-field.mark-delivered.empty{border-style:solid;font-weight:bold}
+.order-field.pressing-mark{box-shadow:0 0 0 2px #1a3a5c inset}
+
+.empty-msg{text-align:center;color:#999;font-size:13px;padding:20px 0}
+#load-error{text-align:center;color:#c53030;font-size:13px;padding:20px 0}
+
+/* ---- ボトムシート共通 ---- */
+.sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50}
+.sheet-overlay.show{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:14px 14px 0 0;padding:20px;max-width:720px;margin:0 auto;z-index:51;max-height:82vh;overflow-y:auto}
+.sheet h2{font-size:16px;color:#1a3a5c;margin-bottom:6px}
+.sheet .sheet-sub{font-size:12px;color:#777;margin-bottom:14px}
+.sheet .detail-line{font-size:13px;color:#444;margin-bottom:6px}
+.sheet .detail-line b{color:#1a3a5c;display:inline-block;min-width:70px}
+
+.mode-row{display:flex;gap:6px;margin-bottom:10px}
+.mode-row label{flex:1;text-align:center;font-size:12px;font-weight:normal;color:#555;padding:8px 4px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer}
+.mode-row input[type="radio"]{display:none}
+.mode-row label.selected{border-color:#2c5282;background:#dbeafe;color:#1a3a5c;font-weight:bold}
+.field-group{margin-bottom:10px}
+.field-group label.field-label{display:block;font-size:11px;color:#777;margin-bottom:3px}
+.field-group select,.field-group input[type="number"],.field-group input[type="date"]{
+  width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:4px;font-size:16px;font-family:inherit;background:#fff;
+}
+.sheet-btns{display:flex;gap:8px;margin-top:14px}
+.first-wave-check{display:flex;align-items:center;gap:8px;font-size:13px;color:#333;padding:8px 0;border-top:1px solid #eee;margin-top:4px}
+.first-wave-check input{width:18px;height:18px}
+.btn-sheet-submit{flex:1;padding:10px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer}
+.btn-sheet-cancel{padding:10px 14px;background:#fff;border:1px solid #999;color:#555;border-radius:6px;font-size:13px;cursor:pointer}
+.btn-cancel-order-link{width:100%;margin-top:8px;padding:9px;background:#fff;border:1px solid #c53030;color:#c53030;border-radius:6px;font-size:12.5px;font-weight:bold;cursor:pointer}
+.sheet-msg{font-size:12px;color:#c53030;margin-top:8px}
+.order-status-note{font-size:12px;color:#276749;background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:8px 10px;margin-bottom:10px}
+.order-status-note.proxy{background:#fff3cd;border-color:#ffc107;color:#856404}
+.view-only-note{font-size:12px;color:#856404;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 10px;margin-top:10px;text-align:center}
+
+/* 補充シート */
+.repl-current{margin-top:6px;text-align:center;font-size:12px;color:#666;background:#f7f9fc;border-radius:8px;padding:9px}
+.repl-current b{font-size:18px;color:#1a3a5c}
+.qty-stepper{display:flex;align-items:center;justify-content:center;gap:16px;margin:14px 0}
+.qty-stepper button{width:34px;height:34px;border-radius:50%;border:1.5px solid #ccc;background:#fff;font-size:16px;font-weight:bold;cursor:pointer}
+.qty-stepper .qs-val{font-size:20px;font-weight:bold;min-width:36px;text-align:center}
+
+/* 在庫データ削除確認シート（管理者・長押しのみ） */
+.btn-delete-confirm{width:100%;padding:12px;background:#c53030;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.admin-links{margin-top:12px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.link-small{appearance:none;background:none;border:none;color:#666;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px;font-family:inherit}
+.link-small.danger{color:#c53030}
+.return-qty-row{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#333;margin:6px 0}
+.return-qty-row input{width:70px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:16px;text-align:center;font-family:inherit}
+.btn-return{width:100%;padding:12px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:6px}
+.btn-close-sheet{width:100%;padding:10px;background:#fff;border:1px solid #999;color:#555;border-radius:6px;font-size:14px;cursor:pointer;margin-top:8px}
+.indiv-row.pressing,.ledger-row.common.pressing{box-shadow:0 0 0 2px #1a3a5c inset}
+@media (min-width:900px){
+  /* PC側のみ：作業カレンダーと同程度の文字サイズに拡大（後勝ちさせるため末尾に配置） */
+  h1{font-size:17px}
+  .login-name-bar{font-size:11px}
+  .lock-banner{font-size:11.5px}
+  .delivery-mode-row{font-size:11.5px}
+  .section-label{font-size:11.5px}
+  .ledger-head{font-size:10px}
+  .ir-date{font-size:10px}
+  .ir-name{font-size:12.5px}
+  .ir-team{font-size:9.5px}
+  .urgent-tag{font-size:8px}
+  .ir-size{font-size:13.5px}
+  .ir-qty{font-size:12.5px}
+  .ir-requester{font-size:10px}
+  .cm-name{font-size:12.5px}
+  .cm-stock{font-size:12.5px}
+  .order-field{font-size:12.5px}
+  .sheet h2{font-size:14.5px}
+  .sheet .sheet-sub{font-size:11px}
+  .sheet .detail-line{font-size:11.5px}
+  .mode-row label{font-size:11px}
+  .field-group label.field-label{font-size:10px}
+  .field-group select,.field-group input[type="number"],.field-group input[type="date"]{font-size:16px}
+  .btn-sheet-submit,.btn-sheet-cancel{font-size:14px}
+  .btn-cancel-order-link{font-size:13.5px}
+  .order-status-note{font-size:13px}
+  .view-only-note{font-size:13px}
+  .repl-current{font-size:13px}
+  .repl-current b{font-size:19px}
+  .qty-stepper button{font-size:17px}
+  .qty-stepper .qs-val{font-size:21px}
+  .btn-delete-confirm{font-size:16px}
+  .btn-close-sheet{font-size:15px}
+  .empty-msg{font-size:14px}
+}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+<div class="container">
+
+<div id="auth-loading">読み込み中...</div>
+
+<div id="auth-login" class="login-box" style="display:none">
+  <h1>📦 在庫表</h1>
+  <button class="btn-google" onclick="loginWithGoogle()">Googleでログイン</button>
+  <div id="auth-msg" style="margin-top:14px;font-size:13px;color:#c53030"></div>
+</div>
+
+<div id="auth-denied" class="login-box" style="display:none">
+  <h1>📦 在庫表</h1>
+  <p style="font-size:14px;color:#c53030">このアカウントはまだ利用登録されていません。管理者に連絡してください。</p>
+</div>
+
+<div id="app-content" style="display:none">
+  <h1>📦 在庫表</h1>
+  <div class="login-name-bar">ログイン中：<span id="login-name-display"></span> さん</div>
+
+  <div class="lock-banner" id="lock-banner">ただいま発注欄はロック中です</div>
+
+  <div class="delivery-mode-row" id="delivery-mode-row">
+    <span>配送済み入力モード</span>
+    <label class="notif-toggle">
+      <input type="checkbox" id="delivery-mode-toggle" onchange="toggleDeliveryMode(this.checked)">
+      <span class="track"></span>
+    </label>
+  </div>
+
+  <div class="delivery-mode-row" id="show-hidden-row" style="display:none">
+    <span>非表示項目を表示（在庫0調査用）</span>
+    <label class="notif-toggle">
+      <input type="checkbox" id="show-hidden-toggle" onchange="toggleShowHiddenIndividual(this.checked)">
+      <span class="track"></span>
+    </label>
+  </div>
+
+  <div class="stock-sections-wrap">
+    <div class="stock-section">
+      <div class="section-label">共通品</div>
+      <div class="common-table-wrap" id="common-table-wrap"></div>
+    </div>
+    <div class="stock-section">
+      <div class="section-label">個人依頼品</div>
+      <div id="individual-table-wrap"></div>
+    </div>
+  </div>
+
+  <div id="load-error" style="display:none"></div>
+</div>
+
+</div>
+
+<!-- 発注設定シート（個人依頼品・共通品 共用） -->
+<div class="sheet-overlay" id="order-sheet-overlay" onclick="closeOrderSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <h2 id="order-sheet-title"></h2>
+    <div class="sheet-sub" id="order-sheet-sub"></div>
+    <div id="order-sheet-status"></div>
+    <div id="order-sheet-form"></div>
+    <div id="order-sheet-viewonly"></div>
+    <div id="order-sheet-finalized"></div>
+    <div class="sheet-msg" id="order-sheet-msg"></div>
+    <button class="btn-close-sheet" onclick="closeOrderSheet()">閉じる</button>
+  </div>
+</div>
+
+<!-- 補充シート（共通品・作業者/管理者のみ） -->
+<div class="sheet-overlay" id="replenish-overlay" onclick="closeReplenishSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <h2 id="replenish-title"></h2>
+    <div class="sheet-sub" id="replenish-sub">補充する数量を入力してください</div>
+    <div class="repl-current" id="replenish-current"></div>
+    <div class="mode-row" id="replenish-mode-row">
+      <label class="selected" id="repl-mode-lbl-add"><input type="radio" name="replenish-mode" value="add" checked onchange="onReplenishModeChange()"> 補充する（＋）</label>
+      <label id="repl-mode-lbl-sub"><input type="radio" name="replenish-mode" value="sub" onchange="onReplenishModeChange()"> 数を減らす（実数調整）</label>
+    </div>
+    <div class="qty-stepper">
+      <button type="button" onclick="adjustReplenishQty(-1)">−</button>
+      <div class="qs-val" id="replenish-qty-val">1</div>
+      <button type="button" onclick="adjustReplenishQty(1)">＋</button>
+    </div>
+    <button class="btn-sheet-submit" id="replenish-submit-btn" style="width:100%" onclick="submitReplenish()">この数を補充する</button>
+    <div class="sheet-msg" id="replenish-msg"></div>
+    <button class="btn-close-sheet" onclick="closeReplenishSheet()">閉じる</button>
+  </div>
+</div>
+
+<!-- 最低数ライン編集シート（共通品・管理者のみ） -->
+<div class="sheet-overlay" id="min-line-overlay" onclick="closeMinLineSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <h2 id="min-line-title"></h2>
+    <div class="sheet-sub">この数以下になったら赤字太字で表示します</div>
+    <div class="field-group">
+      <label class="field-label">最低数ライン</label>
+      <input type="number" id="min-line-input" min="0">
+    </div>
+    <button class="btn-sheet-submit" style="width:100%" onclick="submitMinLine()">この内容で保存する</button>
+    <div class="sheet-msg" id="min-line-msg"></div>
+    <button class="btn-close-sheet" onclick="closeMinLineSheet()">閉じる</button>
+  </div>
+</div>
+
+<!-- 在庫データ削除確認シート（管理者・個人依頼品のみ・長押しで開く） -->
+<div class="sheet-overlay" id="delete-sheet-overlay" onclick="closeDeleteSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <h2>この在庫データを削除しますか？</h2>
+    <div id="delete-sheet-detail"></div>
+    <div style="font-size:12px;color:#856404;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 10px;margin-top:10px">
+      間違って「完成」にしてしまった場合の取消用です。削除すると、元の依頼は作業カレンダー上で工程A・工程Bの状態を保ったまま「未完成」に戻ります。
+    </div>
+    <div id="delete-sheet-msg" style="font-size:12px;color:#c53030;margin-top:8px"></div>
+    <button class="btn-delete-confirm" style="margin-top:14px" onclick="confirmDeleteStockItem()">削除する</button>
+    <button class="btn-close-sheet" onclick="closeDeleteSheet()">閉じる</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = window.APP_CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = window.APP_CONFIG.SUPABASE_KEY;
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = { email: '', name: '', role: '', can_mark_delivery: false, team: null };
+let deliveryModeOn = false;
+let showHiddenIndividual = false;
+
+function individualVisibleFilter(r){
+  if(r.item_type !== 'individual') return false;
+  if(!r.is_hidden) return true;
+  if(!showHiddenIndividual) return false;
+  // 「非表示も表示」トグルには、直近1ヶ月以内に非表示になったものだけを出す
+  if(!r.hidden_at) return true; // 日時が記録されていない古いデータは念のため表示する
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  return new Date(r.hidden_at) >= oneMonthAgo;
+}
+
+function toggleShowHiddenIndividual(checked){
+  showHiddenIndividual = checked;
+  const individualRows = stockItemsCache.filter(individualVisibleFilter);
+  renderIndividualTable(individualRows);
+}
+
+function canMarkDelivery(){
+  return currentUser.role === '管理者' || currentUser.can_mark_delivery === true;
+}
+
+function toggleDeliveryMode(checked){
+  deliveryModeOn = checked;
+  const individualRows = stockItemsCache.filter(individualVisibleFilter);
+  const commonRows = stockItemsCache.filter(r => r.item_type === 'common' && !r.is_hidden);
+  renderIndividualTable(individualRows);
+  renderCommonTable(commonRows);
+}
+
+async function logChange(tableName, recordId, fieldName, oldValue, newValue, itemLabel, byName, byEmail, requesterName, deliveryDate, sizeTxt){
+  await sbClient.from('change_history').insert({
+    table_name: tableName,
+    record_id: recordId,
+    field_name: fieldName,
+    old_value: oldValue === null || oldValue === undefined ? null : String(oldValue),
+    new_value: newValue === null || newValue === undefined ? null : String(newValue),
+    item_label: itemLabel || null,
+    requester_name: requesterName || null,
+    delivery_date: deliveryDate || null,
+    size_text: sizeTxt || null,
+    changed_by_name: byName !== undefined ? byName : currentUser.name,
+    changed_by_email: byEmail !== undefined ? byEmail : currentUser.email
+  });
+}
+
+// 個人品の在庫行から「依頼者名・納入日・サイズ」を取り出す（共通品には存在しないためnull）
+function historyExtras(stockRow){
+  if(!stockRow || stockRow.item_type !== 'individual'){
+    return { requesterName: null, deliveryDate: null, sizeTxt: null };
+  }
+  const dateInfo = stockRow.request_item_date_id ? dateInfoCache[stockRow.request_item_date_id] : null;
+  const sizeTxt = [stockRow.size_l, stockRow.size_w, stockRow.size_h].filter(v=>v!=null).join('×');
+  return {
+    requesterName: stockRow.requester_name || null,
+    deliveryDate: dateInfo ? dateInfo.delivery_date : null,
+    sizeTxt: sizeTxt || null
+  };
+}
+// あまり箱：依頼が取消済みの個人品（最終的な判定はDBが行う。画面は表示と操作の出し分けだけに使う）
+function isSurplusRow(row){
+  if(!row || row.item_type !== 'individual' || !row.request_item_date_id) return false;
+  const di = dateInfoCache[row.request_item_date_id];
+  return !!(di && di.canceled_at);
+}
+// 依頼者欄に出す名前：あまり箱は、取消されていない確定前の発注の配送先だけから決める。なければ「あまり箱」
+function requesterLabelFor(row){
+  if(!isSurplusRow(row)) return row.requester_name || '';
+  const o = (ordersCache[row.id] || [])[0];
+  if(o && o.recipient_name) return o.recipient_name + (o.is_proxy ? '（代理）' : '');
+  return 'あまり箱';
+}
+// 管理者が代理発注で選ぶ「依頼者」の一覧（許可リストの依頼者ロールだけ）
+let requesterNamesCache = null;
+async function loadRequesterNames(){
+  if(requesterNamesCache) return requesterNamesCache;
+  const { data, error } = await sbClient.from('users_allowlist').select('name').eq('role', '依頼者').order('name', { ascending: true });
+  if(error){ return null; }
+  requesterNamesCache = (data || []).map(r => r.name).filter(Boolean);
+  return requesterNamesCache;
+}
+
+let stockItemsCache = [];   // stock_items 全件
+let finalizedOrdersCache = {}; // stock_item_id -> 確定済み（取消されていない）発注の配列
+let ordersCache = {};       // stock_item_id -> 有効な注文の配列（共通品は班ごとに複数件持ちうる）
+let dateInfoCache = {};     // request_item_date_id -> { delivery_date, qty }
+let teams = [];             // team_master 全件（sort_order順）
+let colorMasterCache = []; // color_master 全件（sort_order順）
+
+let lockSettings = { start: null, end: null };
+let isLocked = false;
+let serverTimeOffsetMs = 0; // サーバー時刻 - 端末時刻（この端末の時計のズレを吸収するための補正値）
+
+async function syncServerTime(){
+  const localBefore = Date.now();
+  const { data, error } = await sbClient.rpc('get_server_time');
+  if(error || !data) return;
+  const localAfter = Date.now();
+  const localMid = (localBefore + localAfter) / 2; // 通信にかかった時間の分だけ中間時刻で近似
+  serverTimeOffsetMs = new Date(data).getTime() - localMid;
+}
+
+function getAdjustedNow(){
+  return new Date(Date.now() + serverTimeOffsetMs);
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 依頼フォームの階層カテゴリ「3000まで」「3001以上」は、サイズで自動振り分けするための
+// 内部区分にすぎず、品目名として意味を持たないため、画面表示からは常に除外する。
+const HIDDEN_CATEGORY_LABELS = ['3000まで', '3001以上'];
+function displayItemName(name){
+  return HIDDEN_CATEGORY_LABELS.includes(name) ? '' : (name || '');
+}
+
+// =============================================
+// 締切・解除ロック判定
+// =============================================
+async function loadLockSettings(){
+  const { data, error } = await sbClient
+    .from('business_settings')
+    .select('lock_start_time, lock_end_time')
+    .limit(1)
+    .maybeSingle();
+
+  if(error || !data){ isLocked = false; return; }
+
+  lockSettings.start = data.lock_start_time;
+  lockSettings.end = data.lock_end_time;
+
+  const now = getAdjustedNow();
+  const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':00';
+  isLocked = (nowStr >= lockSettings.start && nowStr < lockSettings.end);
+}
+
+function updateLockBanner(){
+  const banner = document.getElementById('lock-banner');
+  if(currentUser.role === '依頼者' && isLocked) banner.classList.add('show');
+  else banner.classList.remove('show');
+}
+
+function isOrderingBlocked(){
+  return currentUser.role === '依頼者' && isLocked;
+}
+
+function orderModeLabel(order){
+  if(order.mode === '○') return '○（今すぐ欲しい）';
+  if(order.mode === '数量') return `数量 ${order.qty}`;
+  if(order.mode === '日付') return `希望日 ${order.desired_date || ''}`;
+  return order.mode;
+}
+
+// 配送済みの発注を取消すときに在庫へ戻せる個数。個人品は、発注した時に実際に引かれた数（qty_reserved）をそのまま使う（日付の発注は引かれていないので0）
+function restoreQtyFor(order, itemType, stockRow){
+  if(!order) return 0;
+  if(itemType === 'common') return order.qty || 0;
+  return Number(order.qty_reserved) || 0;
+}
+
+// 確定済みの数量指定の発注の合計（個人依頼品の「残り数量」の計算に使う。DB側の合計チェックと同じ数え方）
+function finalizedQtySum(stockItemId){
+  return (finalizedOrdersCache[stockItemId] || [])
+    .filter(o => o.mode === '数量')
+    .reduce((sum, o) => sum + (o.qty || 0), 0);
+}
+
+// =============================================
+// 個人依頼品：一覧テーブル（発注/日付/品目(サイズ)/数量/依頼者）
+// =============================================
+function formatMonthDay(dateStr){
+  const parts = String(dateStr).split('-');
+  if(parts.length < 3) return dateStr;
+  return `${parseInt(parts[1],10)}月${parseInt(parts[2],10)}日`;
+}
+
+function renderIndividualTable(rows){
+  const wrap = document.getElementById('individual-table-wrap');
+  if(!rows.length){
+    wrap.innerHTML = '<div class="empty-msg">現在、個人依頼品はありません</div>';
+    return;
+  }
+
+  const sorted = [...rows].sort((a,b) => {
+    const da = a.request_item_date_id ? (dateInfoCache[a.request_item_date_id]?.delivery_date || '') : '';
+    const db = b.request_item_date_id ? (dateInfoCache[b.request_item_date_id]?.delivery_date || '') : '';
+    const dateCompare = da.localeCompare(db);
+    if(dateCompare !== 0) return dateCompare;
+    return String(a.id).localeCompare(String(b.id));
+  });
+
+  const rowsHtml = sorted.map(row => {
+    const sizeText = [row.size_l, row.size_w, row.size_h].filter(v=>v!=null).join('×');
+    const dateInfo = row.request_item_date_id ? dateInfoCache[row.request_item_date_id] : null;
+    const activeOrders = ordersCache[row.id] || [];
+    const order = activeOrders[0];
+    // 発注時に「日付」モードで希望日が指定されていればそちらを優先表示、なければ元の納入日
+    const rawDateText = (order && order.mode === '日付' && order.desired_date) ? order.desired_date : (dateInfo ? dateInfo.delivery_date : '');
+    const dateText = rawDateText ? rawDateText.slice(5).replace('-', '/') : '';
+    const urgentTag = dateInfo && dateInfo.is_urgent ? '<span class="urgent-tag">急ぎ</span>' : '';
+
+    const canOperate = currentUser.role === '依頼者' || currentUser.role === '管理者';
+    const isSelfItem = currentUser.name && row.requester_name === currentUser.name;
+    const blocked = isOrderingBlocked();
+    const mark = (row.delivery_marks || {}).individual || '';
+    const deliveredLocked = mark === 'delivered' && currentUser.role !== '管理者';
+    const deliveryModeActive = deliveryModeOn && canMarkDelivery();
+    const surplusRow = isSurplusRow(row);
+    const clickable = deliveryModeActive ? !!(order || mark) : (canOperate && (isSelfItem || surplusRow || currentUser.role === '管理者') && !blocked && !deliveredLocked);
+
+    const fieldClass = order ? (order.mode === '日付' ? 'date-mode' : '') : 'empty';
+    const isCircle = order && order.mode === '○';
+    const fieldLabel = order
+      ? (order.mode === '数量'
+          ? (() => {
+              const orderedQty = activeOrders.filter(o => o.mode === '数量').reduce((sum, o) => sum + (o.qty || 0), 0) + finalizedQtySum(row.id);
+              return (dateInfo && dateInfo.qty && orderedQty < dateInfo.qty) ? `${orderedQty}/${dateInfo.qty}` : orderedQty;
+            })()
+          : (order.mode === '日付' ? (order.desired_date ? formatMonthDay(order.desired_date) : '日') : (dateInfo && dateInfo.qty != null ? dateInfo.qty : '○')))
+      : 'ー';
+    const fieldContent = escapeHtml(String(fieldLabel));
+    const orderColorCode = (order && order.mode !== '日付')
+      ? ((colorMasterCache.find(c => c.id === order.color_id) || colorMasterCache.find(c => c.color_name === '黒') || {}).color_code)
+      : null;
+    const colorStyleAttr = orderColorCode ? ` style="color:${escapeHtml(orderColorCode)}"` : '';
+    const firstWaveBadge = (order && order.is_first_wave) ? '<span class="first-wave-badge">1便</span>' : '';
+    const disabledClass = clickable ? '' : 'disabled';
+    const onclickAttr = clickable
+      ? (deliveryModeActive ? `onclick="cycleDeliveryMark('${row.id}','individual')"` : `onclick="openOrderSheet('${row.id}','individual')"`)
+      : '';
+    const markClass = mark ? `mark-${mark}` : '';
+    const hiddenClass = row.is_hidden ? 'hidden-item' : '';
+    const hiddenBadge = row.is_hidden ? '<span class="hidden-badge">非表示中</span>' : '';
+
+    return `
+      <div class="indiv-row ${hiddenClass}" data-stock-item-id="${row.id}">
+        <div class="ir-cell"><button class="order-field ${fieldClass} ${disabledClass} ${markClass}" data-mark-key="individual" ${onclickAttr}${colorStyleAttr}>${fieldContent}</button>${firstWaveBadge}</div>
+        <div class="ir-date">${escapeHtml(dateText)}</div>
+        <div class="ir-main">
+          <div class="ir-name">${dateInfo && dateInfo.team_abbr ? `<span class="ir-team">${escapeHtml(dateInfo.team_abbr)}</span>` : ''}${escapeHtml(displayItemName(row.item_name))}${urgentTag}${hiddenBadge}</div>
+          <div class="ir-size">${escapeHtml(sizeText)}</div>
+        </div>
+        <div class="ir-qty">${row.stock_qty ?? 0}</div>
+        <div class="ir-requester">${escapeHtml(requesterLabelFor(row))}</div>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="ledger-table">
+      <div class="ledger-head indiv-head"><span>発注</span><span>日付</span><span>品目</span><span>在庫</span><span>依頼者</span></div>
+      ${rowsHtml}
+    </div>`;
+
+  bindIndividualLongPress();
+}
+
+// =============================================
+// 共通品：品目/在庫/班ごとの発注欄（v8形式の台帳、班数は可変）
+// =============================================
+function renderCommonTable(rows){
+  const wrap = document.getElementById('common-table-wrap');
+  if(!rows.length){
+    wrap.innerHTML = '<div class="empty-msg">現在、共通品はありません</div>';
+    return;
+  }
+  if(!teams.length){
+    wrap.innerHTML = '<div class="empty-msg">班マスタが未登録です</div>';
+    return;
+  }
+
+  const gridCols = `1fr 46px ${teams.map(()=>'52px').join(' ')}`;
+  const canReplenish = currentUser.role === '作業者' || currentUser.role === '管理者';
+
+  const headHtml = `
+    <div class="ledger-head" style="grid-template-columns:${gridCols}">
+      <span>品目</span><span>在庫</span>${teams.map(t => `<span>${escapeHtml(t.team_name)}</span>`).join('')}
+    </div>`;
+
+  const rowsHtml = rows.map(row => {
+    const isLow = (row.min_line ?? 0) > 0 && (row.stock_qty ?? 0) <= row.min_line;
+    const stockClass = isLow ? 'low' : '';
+    const stockClickable = canReplenish ? 'clickable' : '';
+    const stockOnclick = canReplenish ? `onclick="openReplenishSheet('${row.id}')"` : '';
+
+    const teamCellsHtml = teams.map(team => {
+      const activeOrders = ordersCache[row.id] || [];
+      const order = activeOrders.find(o => o.team_id === team.id);
+      const blocked = isOrderingBlocked();
+      const mark = (row.delivery_marks || {})[team.id] || '';
+      const deliveredLocked = mark === 'delivered' && currentUser.role !== '管理者';
+      const deliveryModeActive = deliveryModeOn && canMarkDelivery();
+      // 依頼者は、自分の班の欄だけ操作できる（管理者は全班）。班が未設定の依頼者は操作できない
+      const teamOk = currentUser.role === '管理者' || currentUser.team === team.id;
+      const canOperate = deliveryModeActive ? !!(order || mark) : ((currentUser.role === '依頼者' || currentUser.role === '管理者') && teamOk && !blocked && !deliveredLocked);
+      const fieldClass = order ? '' : 'empty';
+      const isCircle = order && order.mode === '○';
+      const fieldLabel = order ? (order.mode === '数量' ? order.qty : (order.mode === '日付' ? (order.desired_date ? order.desired_date.slice(5).replace('-', '/') : '日') : '○')) : 'ー';
+      const fieldContent = isCircle ? '<span class="order-circle-dot"></span>' : escapeHtml(String(fieldLabel));
+      const firstWaveBadge = (order && order.is_first_wave) ? '<span class="first-wave-badge">1便</span>' : '';
+      const disabledClass = canOperate ? '' : 'disabled';
+      const onclickAttr = canOperate
+        ? (deliveryModeActive ? `onclick="cycleDeliveryMark('${row.id}','${team.id}')"` : `onclick="openOrderSheet('${row.id}','common','${team.id}')"`)
+        : '';
+      const markClass = mark ? `mark-${mark}` : '';
+      return `<div class="cm-cell"><button class="order-field ${fieldClass} ${disabledClass} ${markClass}" data-mark-key="${team.id}" ${onclickAttr}>${fieldContent}</button>${firstWaveBadge}</div>`;
+    }).join('');
+
+    const minLineEditBtn = currentUser.role === '管理者'
+      ? `<button class="min-line-edit-btn" onclick="openMinLineSheet('${row.id}')" title="最低数ラインを編集">✎</button>`
+      : '';
+
+    return `
+      <div class="ledger-row common" style="grid-template-columns:${gridCols}" data-stock-item-id="${row.id}">
+        <div class="cm-name">${escapeHtml(displayItemName(row.item_name))}${minLineEditBtn}</div>
+        <div class="cm-stock ${stockClass} ${stockClickable}" ${stockOnclick}>${row.stock_qty ?? 0}</div>
+        ${teamCellsHtml}
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="ledger-table">${headHtml}${rowsHtml}</div>`;
+
+
+}
+
+// =============================================
+// 発注設定シート（個人依頼品・共通品 共用）
+// =============================================
+let orderSheetState = { stockItemId: null, itemType: null, teamId: null, existingOrderId: null, existingMode: null, existingQty: 0, dateRowId: null, totalQty: null };
+
+let savedScrollY = 0;
+
+async function openOrderSheet(stockItemId, itemType, teamId){
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+
+  savedScrollY = window.scrollY;
+
+  const dateInfo = row.request_item_date_id ? dateInfoCache[row.request_item_date_id] : null;
+  orderSheetState = { stockItemId, itemType, teamId: teamId || null, existingOrderId: null, existingMode: null, existingQty: 0, dateRowId: row.request_item_date_id || null, totalQty: dateInfo ? dateInfo.qty : null };
+
+  const isViewOnly = currentUser.role === '作業者';
+  const canOperate = currentUser.role === '依頼者' || currentUser.role === '管理者';
+
+  const teamBadge = (itemType === 'individual' && dateInfo && dateInfo.team_abbr) ? `<span class="ir-team">${escapeHtml(dateInfo.team_abbr)}</span>` : '';
+  let title = teamBadge + escapeHtml(displayItemName(row.item_name));
+  let sub = '';
+  if(itemType === 'individual'){
+    const sizeText = [row.size_l, row.size_w, row.size_h].filter(v=>v!=null).join('×');
+    sub = `${sizeText}${dateInfo ? '　納入日：' + dateInfo.delivery_date : ''}　依頼者：${requesterLabelFor(row)}`;
+  } else {
+    const team = teams.find(t => t.id === teamId);
+    sub = team ? team.team_name : '';
+  }
+  document.getElementById('order-sheet-title').innerHTML = title;
+  document.getElementById('order-sheet-sub').textContent = sub;
+
+  const activeOrders = ordersCache[stockItemId] || [];
+  const existing = itemType === 'common' ? activeOrders.find(o => o.team_id === teamId) : activeOrders[0];
+  if(existing){
+    orderSheetState.existingOrderId = existing.id;
+    orderSheetState.existingMode = existing.mode;
+    orderSheetState.existingQty = existing.qty || 0;
+  }
+
+  let statusHtml = '';
+  if(existing){
+    const proxyTag = existing.is_proxy ? '（代理）' : '';
+    const whoName = (itemType === 'individual' && isSurplusRow(row) && existing.recipient_name) ? existing.recipient_name : existing.operated_by_name;
+    statusHtml = `<div class="order-status-note${existing.is_proxy?' proxy':''}">現在：${escapeHtml(orderModeLabel(existing))}　${escapeHtml(whoName)}さん${proxyTag}</div>`;
+    const finQtyNow = itemType === 'individual' ? finalizedQtySum(stockItemId) : 0;
+    if(itemType === 'individual' && existing.mode === '数量' && orderSheetState.totalQty && existing.qty + finQtyNow < orderSheetState.totalQty){
+      statusHtml += `<div class="order-status-note">これまでに${existing.qty + finQtyNow}個発注済み。残り${orderSheetState.totalQty - existing.qty - finQtyNow}個です（部分発注）。</div>`;
+    }
+    if(itemType === 'individual' && activeOrders.length > 1){
+      const unfinTotal = activeOrders.filter(o => o.mode === '数量').reduce((sum, o) => sum + (o.qty || 0), 0);
+      statusHtml += `<div class="order-status-note proxy">未配送の発注が${activeOrders.length}件あります（数量の合計${unfinTotal}個）。「取消す」は古いものから1件ずつ。</div>`;
+    }
+  } else if(itemType === 'individual' && finalizedQtySum(stockItemId) > 0 && orderSheetState.totalQty){
+    const finQtyOnly = finalizedQtySum(stockItemId);
+    statusHtml = `<div class="order-status-note">配送済み ${finQtyOnly}個 / 未発注 ${Math.max(0, orderSheetState.totalQty - finQtyOnly)}個</div>`;
+  } else if(itemType === 'individual' && (finalizedOrdersCache[stockItemId] || []).length > 0){
+    // ○（全数）で発注して配送済みになった分
+    const finTxt = (finalizedOrdersCache[stockItemId] || []).map(o => o.mode === '数量' ? `${o.qty || 0}個` : '○（全数）').join('、');
+    statusHtml = `<div class="order-status-note">配送済み：${finTxt}</div>`;
+  }
+  document.getElementById('order-sheet-status').innerHTML = statusHtml;
+
+  // 管理者だけの操作：配送済みの発注の取消・「戻ってきた」・非表示（個人品のみ。共通品は確定後に取消さない運用）
+  const hiddenAdminMode = currentUser.role === '管理者' && itemType === 'individual' && !!row.is_hidden;
+  let adminHtml = '';
+  if(currentUser.role === '管理者' && itemType === 'individual'){
+    const finList = finalizedOrdersCache[stockItemId] || [];
+    const restoreTotal = finList.reduce((sum, o) => sum + restoreQtyFor(o, itemType, row), 0);
+    const finLabel = (o) => o.mode === '数量' ? `${o.qty || 0}個` : '○（全数）';
+    // 戻ってきた個数を入力できる（一部だけ戻った場合用。○（全数）の発注も同じ）
+    const canPartial = restoreTotal > 0;
+    const qtyRowHtml = canPartial
+      ? `<div class="return-qty-row">戻ってきた個数 <input type="number" id="return-qty-input" min="1" max="${restoreTotal}" value="${restoreTotal}"> 個</div>`
+      : '';
+    const returnLabel = '戻ってきた' + (restoreTotal === 0 ? '（在庫には戻りません）' : (!canPartial ? '（在庫に' + restoreTotal + '個戻す）' : ''));
+    if(hiddenAdminMode){
+      // 消えている行：発注欄は出さず、「戻ってきた」だけ
+      adminHtml = finList.length
+        ? `<div class="order-status-note">配送済み：${finList.map(finLabel).join('、')}</div>
+           ${qtyRowHtml}
+           <button class="btn-return" onclick="returnItem()">${returnLabel}</button>`
+        : `<button class="btn-return" onclick="toggleHideStockItem(false)">非表示を解除する</button>`;
+    } else {
+      const links = [];
+      if(finList.length){
+        if(qtyRowHtml) links.push(qtyRowHtml);
+        links.push(`<button class="link-small" onclick="returnItem()">${returnLabel} ▸</button>`);
+      }
+      links.push(`<button class="link-small danger" onclick="toggleHideStockItem(true)">この品目を非表示にする</button>`);
+      adminHtml = `<div class="admin-links">${links.join('')}</div>`;
+    }
+  }
+  document.getElementById('order-sheet-finalized').innerHTML = adminHtml;
+
+  document.getElementById('order-sheet-msg').textContent = '';
+
+  const blocked = isOrderingBlocked();
+  const isSelfItem = itemType === 'individual' && currentUser.name && row.requester_name === currentUser.name;
+  const markKey = itemType === 'individual' ? 'individual' : teamId;
+  const mark = (row.delivery_marks || {})[markKey] || '';
+  const deliveredLocked = mark === 'delivered' && currentUser.role !== '管理者';
+  const surplusSheet = itemType === 'individual' && isSurplusRow(row);
+  // あまり箱：依頼者は、まだ発注がないか、自分が出した発注のときだけ操作できる（管理者は全部可）。最終的にはDBも同じ確認をする
+  const surplusOtherOrder = surplusSheet && existing && currentUser.role !== '管理者' && existing.operated_by_email !== currentUser.email;
+  const canEdit = canOperate && !blocked && !deliveredLocked && !surplusOtherOrder && (itemType === 'common' || isSelfItem || surplusSheet || currentUser.role === '管理者');
+  orderSheetState.surplus = surplusSheet;
+
+  if(hiddenAdminMode){
+    document.getElementById('order-sheet-form').innerHTML = '';
+    document.getElementById('order-sheet-viewonly').innerHTML = '';
+  } else if(canEdit){
+    const qtyBase = ((orderSheetState.existingMode === '数量') ? orderSheetState.existingQty : 0) + (itemType === 'individual' ? finalizedQtySum(stockItemId) : 0);
+    const stockQty = row.stock_qty ?? 0;
+    let qtyMax = orderSheetState.totalQty ? (orderSheetState.totalQty - qtyBase) : Infinity;
+    if(itemType === 'common'){
+      // 共通品はstock_qtyが既にリアルタイムの残数（他班の発注分を反映済み）なので、
+      // 自班が今持っている分を足し戻した数までが入力可能な上限になる
+      const ownQty = orderSheetState.existingQty || 0;
+      qtyMax = Math.max(0, stockQty + ownQty);
+    } else {
+      qtyMax = Math.min(qtyMax, Math.max(0, stockQty));
+    }
+    qtyMax = Number.isFinite(qtyMax) ? qtyMax : '';
+    const isCommon = itemType === 'common';
+    // 既存発注があれば、そのモード・入力値をフォームの初期状態に反映する
+    const initialMode = existing ? existing.mode : (isCommon ? '数量' : '○');
+    const selCls = (m) => initialMode === m ? 'selected' : '';
+    const chkAttr = (m) => initialMode === m ? 'checked' : '';
+    const modeRowHtml = isCommon
+      ? `<div class="mode-row" id="order-mode-row">
+        <label class="${selCls('数量')}" id="mode-lbl-qty"><input type="radio" name="order-mode" value="数量" ${chkAttr('数量')} onchange="onOrderModeChange()"> 数量</label>
+        <label class="${selCls('日付')}" id="mode-lbl-date"><input type="radio" name="order-mode" value="日付" ${chkAttr('日付')} onchange="onOrderModeChange()"> 日付</label>
+      </div>`
+      : `<div class="mode-row" id="order-mode-row">
+        <label class="${selCls('○')}" id="mode-lbl-circle"><input type="radio" name="order-mode" value="○" ${chkAttr('○')} onchange="onOrderModeChange()"> ○（全数）</label>
+        <label class="${selCls('数量')}" id="mode-lbl-qty"><input type="radio" name="order-mode" value="数量" ${chkAttr('数量')} onchange="onOrderModeChange()"> 数量</label>
+        <label class="${selCls('日付')}" id="mode-lbl-date"><input type="radio" name="order-mode" value="日付" ${chkAttr('日付')} onchange="onOrderModeChange()"> 日付</label>
+      </div>`;
+    const qtyGroupVisible = isCommon ? true : (initialMode === '数量');
+    const dateGroupVisible = initialMode === '日付';
+    const colorGroupVisible = !isCommon && initialMode !== '日付';
+    const qtyInitialVal = (isCommon && existing && existing.mode === '数量') ? existing.qty : '';
+    const qtyLabelText = (!isCommon && existing && existing.mode === '数量') ? '追加する数量' : '数量';
+    const dateInitialVal = (existing && existing.mode === '日付' && existing.desired_date) ? existing.desired_date : '';
+    const firstWaveChecked = existing && existing.is_first_wave ? 'checked' : '';
+    const defaultColorId = (colorMasterCache.find(c => c.color_name === '黒') || colorMasterCache[0] || {}).id || null;
+    const initialColorId = existing ? (existing.color_id || defaultColorId) : null;
+    const colorRowHtml = !isCommon ? `
+      <div class="field-group" id="order-color-group" style="display:${colorGroupVisible ? '' : 'none'}">
+        <label class="field-label">色</label>
+        <div class="color-row" id="order-color-row">
+          ${colorMasterCache.map(c => `
+            <label class="color-opt ${initialColorId === c.id ? 'selected' : ''}">
+              <input type="radio" name="order-color" value="${c.id}" ${initialColorId === c.id ? 'checked' : ''} onchange="onOrderColorChange()">
+              <span class="color-swatch" style="background:${escapeHtml(c.color_code)}"></span>${escapeHtml(c.color_name)}
+            </label>`).join('')}
+        </div>
+      </div>` : '';
+    let recipientRowHtml = '';
+    if(surplusSheet && currentUser.role === '管理者'){
+      const names = await loadRequesterNames();
+      const preset = (existing && existing.recipient_name) ? existing.recipient_name : '';
+      recipientRowHtml = names
+        ? `<div class="field-group"><label class="field-label">頼んだ依頼者（必須）</label>
+             <select id="order-recipient-select"><option value="">選んでください</option>${names.map(n => `<option value="${escapeHtml(n)}" ${n === preset ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('')}</select></div>`
+        : `<div class="view-only-note">依頼者の一覧を取得できないため、代理発注はできません</div>`;
+    }
+    document.getElementById('order-sheet-form').innerHTML = `
+      ${recipientRowHtml}
+      ${modeRowHtml}
+      <div class="field-group" id="order-qty-group" style="display:${qtyGroupVisible ? '' : 'none'}">
+        <label class="field-label">${qtyLabelText}</label>
+        <input type="number" id="order-qty-input" min="1" max="${qtyMax}" value="${qtyInitialVal}">
+      </div>
+      <div class="field-group" id="order-date-group" style="display:${dateGroupVisible ? '' : 'none'}">
+        <label class="field-label">希望日</label>
+        <input type="date" id="order-date-input" value="${dateInitialVal}">
+      </div>
+      ${colorRowHtml}
+      <label class="first-wave-check">
+        <input type="checkbox" id="order-first-wave-input" ${firstWaveChecked}>
+        本日の1便でどうしても欲しい
+      </label>
+      <div class="sheet-btns">
+        <button class="btn-sheet-submit" onclick="submitOrder()">この内容で発注する</button>
+      </div>
+      ${existing ? `<button class="btn-cancel-order-link" onclick="cancelOrder()">この発注を取消す</button>` : ''}
+    `;
+    document.getElementById('order-sheet-viewonly').innerHTML = '';
+  } else {
+    document.getElementById('order-sheet-form').innerHTML = '';
+    document.getElementById('order-sheet-viewonly').innerHTML = isViewOnly
+      ? `<div class="view-only-note">閲覧のみです（発注操作はできません）</div>`
+      : (surplusOtherOrder ? `<div class="view-only-note">他の人が発注済みのため、操作できません</div>`
+      : deliveredLocked ? `<div class="view-only-note">配送済みのため操作できません</div>`
+      : (blocked ? `<div class="view-only-note">ただいまロック中のため操作できません</div>` : ''));
+  }
+
+  document.getElementById('order-sheet-overlay').classList.add('show');
+}
+
+function closeOrderSheet(e){
+  if(e && e.target !== e.currentTarget) return;
+  document.getElementById('order-sheet-overlay').classList.remove('show');
+  setTimeout(() => window.scrollTo(0, savedScrollY), 50);
+}
+
+function onOrderModeChange(){
+  const mode = document.querySelector('input[name="order-mode"]:checked').value;
+  const isCommon = orderSheetState.itemType === 'common';
+  ['circle','qty','date'].forEach(k => {
+    const el = document.getElementById(`mode-lbl-${k}`);
+    if(el) el.classList.remove('selected');
+  });
+  const map = {'○':'circle','数量':'qty','日付':'date'};
+  document.getElementById(`mode-lbl-${map[mode]}`).classList.add('selected');
+  if(isCommon){
+    // 共通品は○がなく、日付モードでも数量を必須で入力してもらう
+    document.getElementById('order-qty-group').style.display = '';
+    document.getElementById('order-date-group').style.display = (mode==='日付') ? '' : 'none';
+  } else {
+    document.getElementById('order-qty-group').style.display = (mode==='数量') ? '' : 'none';
+    document.getElementById('order-date-group').style.display = (mode==='日付') ? '' : 'none';
+    const colorGroupEl = document.getElementById('order-color-group');
+    if(colorGroupEl) colorGroupEl.style.display = (mode!=='日付') ? '' : 'none';
+  }
+}
+
+function onOrderColorChange(){
+  document.querySelectorAll('#order-color-row .color-opt').forEach(el => el.classList.remove('selected'));
+  const checked = document.querySelector('input[name="order-color"]:checked');
+  if(checked) checked.closest('.color-opt').classList.add('selected');
+}
+
+async function submitOrder(){
+  if(isOrderingBlocked()){
+    document.getElementById('order-sheet-msg').textContent = 'ただいま発注欄はロック中のため、発注できません。';
+    return;
+  }
+
+  const { stockItemId, itemType, teamId, existingOrderId, existingMode, existingQty, dateRowId, totalQty } = orderSheetState;
+  const isCommon = itemType === 'common';
+  const mode = document.querySelector('input[name="order-mode"]:checked').value;
+  const msgEl = document.getElementById('order-sheet-msg');
+  msgEl.textContent = '';
+
+  let qty = null, desiredDate = null;
+  const needsQty = isCommon ? true : (mode === '数量');
+  if(needsQty){
+    qty = parseInt(document.getElementById('order-qty-input').value, 10);
+    if(!qty || qty < 1){ msgEl.textContent = '数量を入力してください。'; return; }
+  }
+  if(mode === '日付'){
+    desiredDate = document.getElementById('order-date-input').value;
+    if(!desiredDate){ msgEl.textContent = '希望日を入力してください。'; return; }
+  }
+  const isFirstWave = document.getElementById('order-first-wave-input').checked;
+
+  let colorId = null;
+  if(!isCommon && mode !== '日付'){
+    const checkedColor = document.querySelector('input[name="order-color"]:checked');
+    if(!checkedColor){ msgEl.textContent = '色を選択してください。'; return; }
+    colorId = checkedColor.value;
+  }
+
+  const stockRow = stockItemsCache.find(r => r.id === stockItemId);
+  const isSelfItem = itemType === 'individual' && stockRow && stockRow.requester_name === currentUser.name;
+  const surplusSubmit = itemType === 'individual' && isSurplusRow(stockRow);
+  // あまり箱：本人の発注は代理ではない。管理者の発注だけ代理（最終的にはDBが決める）
+  const isProxy = itemType === 'individual' ? (surplusSubmit ? currentUser.role === '管理者' : !isSelfItem) : false;
+  let recipientName = null;
+  if(surplusSubmit && currentUser.role === '管理者'){
+    const sel = document.getElementById('order-recipient-select');
+    recipientName = sel ? sel.value : '';
+    if(!recipientName){ msgEl.textContent = '頼んだ依頼者を選んでください。'; return; }
+  }
+  const exOrder = historyExtras(stockRow);
+
+  if(mode === '数量' && !isCommon && totalQty){
+    const baseQty = ((existingMode === '数量') ? existingQty : 0) + finalizedQtySum(stockItemId);
+    if(baseQty + qty > totalQty){
+      msgEl.textContent = `発注数が残数（${totalQty - baseQty}個）を超えています。`;
+      return;
+    }
+  }
+
+  // 共通品：数量・日付どちらのモードでも必ず数量を伴うため、今の在庫数(=既に他班分反映済みのリアルタイムな残数)を
+  // その場で見て判定する。個人依頼品はstock_qtyが「依頼された合計数」のため、この減算対象には含めない。
+  let commonStockDelta = 0;
+  if(isCommon){
+    const stockQty = stockRow?.stock_qty ?? 0;
+    const baseQtyForStock = (existingOrderId && existingMode === '数量' && mode === '数量') ? (existingQty || 0) : 0;
+    commonStockDelta = qty - baseQtyForStock;
+    if(commonStockDelta > stockQty){
+      msgEl.textContent = `在庫数（${stockQty}個）を超えています。`;
+      return;
+    }
+  } else if(mode === '数量'){
+    const stockQty = stockRow?.stock_qty ?? 0;
+    // stock_qtyは既発注分が引かれた後の残数のため、今回追加する数量だけを比べる
+    if(qty > stockQty){
+      msgEl.textContent = `在庫数（${stockQty}個）を超えています。`;
+      return;
+    }
+  }
+
+  let cumulativeQty = qty;
+
+  if(mode === '数量' && existingOrderId && existingMode === '数量' && !isCommon){
+    // 既存の数量発注に積み増す（部分発注・個人依頼品のみ）
+    cumulativeQty = existingQty + qty;
+    let updErr;
+    if(currentUser.role === '管理者'){
+      ({ error: updErr } = await sbClient.from('stock_orders').update({ qty: cumulativeQty, is_first_wave: isFirstWave, color_id: colorId }).eq('id', existingOrderId));
+      if(updErr){
+        msgEl.textContent = '発注に失敗しました：' + updErr.message;
+        return;
+      }
+      // 管理者はupdate_stock_order_qty関数を経由しないため、記録はここで行う
+      await logChange('stock_orders', existingOrderId, 'qty', existingQty, cumulativeQty, stockRow?.item_name, undefined, undefined, exOrder.requesterName, exOrder.deliveryDate, exOrder.sizeTxt);
+    } else {
+      ({ error: updErr } = await sbClient.rpc('update_stock_order_qty', { p_order_id: existingOrderId, p_new_qty: cumulativeQty, p_is_first_wave: isFirstWave, p_color_id: colorId }));
+      if(updErr){
+        msgEl.textContent = '発注に失敗しました：' + updErr.message;
+        return;
+      }
+      // change_historyへの記録はupdate_stock_order_qty関数側で自動的に行われるため、ここでは呼ばない
+    }
+  } else if(isCommon && existingOrderId && existingMode === '数量' && mode === '数量'){
+    // 共通品の数量変更：既存の発注の数量を直接書き換える（在庫の増減はDB側の自動処理が行う）
+    const { error: updErr } = await sbClient.rpc('update_common_order_qty', { p_order_id: existingOrderId, p_new_qty: qty, p_is_first_wave: isFirstWave });
+    if(updErr){
+      msgEl.textContent = '発注に失敗しました：' + updErr.message;
+      return;
+    }
+    // change_historyへの記録はupdate_common_order_qty関数側で自動的に行われるため、ここでは呼ばない
+  } else {
+    // 新規登録を先に行い、成功を確認してから既存の発注を取消す（モードが変わった場合、または○／日付の場合）
+    const payload = {
+      stock_item_id: stockItemId,
+      operated_by_email: currentUser.email,
+      operated_by_name: currentUser.name,
+      destination: null,
+      team_id: itemType === 'common' ? teamId : null,
+      mode: mode,
+      qty: qty,
+      desired_date: desiredDate,
+      is_proxy: isProxy,
+      ...(recipientName ? { recipient_name: recipientName } : {}),
+      is_canceled: false,
+      is_first_wave: isFirstWave,
+      color_id: colorId
+    };
+
+    const { data: insertedOrder, error } = await sbClient.from('stock_orders').insert(payload).select('id').single();
+    if(error){
+      msgEl.textContent = '発注に失敗しました：' + error.message;
+      return;
+    }
+
+    if(insertedOrder){
+      await logChange('stock_orders', insertedOrder.id, 'order', null, `${mode}${qty ? '（' + qty + '）' : ''}${desiredDate ? '（' + desiredDate + '）' : ''}`, stockRow?.item_name, undefined, undefined, exOrder.requesterName, exOrder.deliveryDate, exOrder.sizeTxt);
+    }
+
+    if(existingOrderId){
+      let cancelErr;
+      if(currentUser.role === '管理者'){
+        ({ error: cancelErr } = await sbClient.from('stock_orders').update({ is_canceled: true }).eq('id', existingOrderId));
+        if(cancelErr){
+          msgEl.textContent = '発注は完了しましたが、古い発注の取消に失敗しました：' + cancelErr.message;
+          return;
+        }
+        // 管理者はcancel_stock_order関数を経由しないため、記録はここで行う
+        await logChange('stock_orders', existingOrderId, 'is_canceled', false, true, stockRow?.item_name, undefined, undefined, exOrder.requesterName, exOrder.deliveryDate, exOrder.sizeTxt);
+      } else {
+        ({ error: cancelErr } = await sbClient.rpc('cancel_stock_order', { order_id: existingOrderId }));
+        if(cancelErr){
+          msgEl.textContent = '発注は完了しましたが、古い発注の取消に失敗しました：' + cancelErr.message;
+          return;
+        }
+        // change_historyへの記録はcancel_stock_order関数側で自動的に行われるため、ここでは呼ばない
+      }
+    }
+  }
+
+  // 共通品の在庫の増減は、DB側の自動処理（発注の登録・数量変更・取消）が行う。画面からは在庫を直接増減しない
+
+  // 個人品・数量モードは、依頼の合計数量に達するまで依頼側を「発注可能」のまま残す（部分発注）
+  if(itemType === 'individual' && dateRowId && !surplusSubmit){
+    const newStatus = (mode === '数量' && totalQty && (cumulativeQty + finalizedQtySum(stockItemId)) < totalQty) ? '発注可能' : '発注済み・受取待ち';
+    const { error: stErr } = await sbClient.from('request_item_dates').update({ status: newStatus }).eq('id', dateRowId);
+    if(!stErr){
+      await logChange('request_item_dates', dateRowId, 'status', null, newStatus, stockRow?.item_name, undefined, undefined, exOrder.requesterName, exOrder.deliveryDate, exOrder.sizeTxt);
+    }
+  }
+
+  closeOrderSheet();
+  await loadStockItems();
+}
+
+// 確定済みの発注の取消（管理者のみ）。在庫数は自動では戻さない（実物が戻った時は管理者が手で直す）
+let orderCancelBusy = false;
+// 取消系の処理中は、ボタンを押せなくする（二重実行の防止）
+function setOrderCancelBusy(flag){
+  orderCancelBusy = flag;
+  document.querySelectorAll('#order-sheet-finalized button').forEach(btn => { btn.disabled = flag; });
+}
+
+// 「戻ってきた」：配送済みの発注を全部取消し、入力した個数を在庫に戻し、消えていた行を表に戻す（管理者のみ・個人品のみ）。全部DB関数が1回の流れで行う
+async function returnItem(){
+  if(currentUser.role !== '管理者') return;
+  if(orderCancelBusy) return;
+  const { stockItemId, itemType } = orderSheetState;
+  if(itemType !== 'individual') return;
+  const stockRow = stockItemsCache.find(r => r.id === stockItemId);
+  const msgEl = document.getElementById('order-sheet-msg');
+  if(!stockRow) return;
+  const finList = finalizedOrdersCache[stockItemId] || [];
+  if(!finList.length) return;
+
+  const restoreTotal = finList.reduce((sum, o) => sum + restoreQtyFor(o, itemType, stockRow), 0);
+  const willUnhide = !!stockRow.is_hidden;
+
+  // 戻ってきた個数（入力欄がある時だけ。なければ全部戻す）
+  let returnQty = restoreTotal;
+  const qtyInput = document.getElementById('return-qty-input');
+  if(qtyInput){
+    const n = parseInt(qtyInput.value, 10);
+    if(!Number.isInteger(n) || n < 1 || n > restoreTotal){
+      msgEl.textContent = '戻ってきた個数は1〜' + restoreTotal + 'の数字で入力してください。';
+      return;
+    }
+    returnQty = n;
+  }
+  msgEl.textContent = '';
+  const confirmText = (returnQty > 0
+      ? '配送済みの発注を取消し、在庫に' + returnQty + '個戻します。'
+      : '配送済みの発注を取消します（在庫には戻りません）。')
+    + (returnQty > 0 && returnQty < restoreTotal ? '\n残り' + (restoreTotal - returnQty) + '個は配送先に残った扱いです（在庫には入りません）。' : '')
+    + (willUnhide ? '\n消えている行も表に戻します。' : '')
+    + '\nよろしいですか？';
+  if(!confirm(confirmText)) return;
+
+  setOrderCancelBusy(true);
+  const { error } = await sbClient.rpc('return_individual_item', {
+    p_stock_item_id: stockItemId, p_return_qty: returnQty, p_order_id: null, p_unhide: willUnhide
+  });
+  if(error){
+    msgEl.textContent = '失敗しました（何も変わっていません）：' + error.message;
+    setOrderCancelBusy(false);
+    return;
+  }
+  setOrderCancelBusy(false);
+  closeOrderSheet();
+  await loadStockItems();
+}
+
+async function cancelOrder(){
+  const { existingOrderId, stockItemId, itemType, teamId } = orderSheetState;
+  if(!existingOrderId) return;
+
+  const stockRowCheck = stockItemsCache.find(r => r.id === stockItemId);
+  const markKeyCheck = itemType === 'individual' ? 'individual' : teamId;
+  const markCheck = (stockRowCheck && stockRowCheck.delivery_marks || {})[markKeyCheck] || '';
+  if(markCheck === 'delivered' && currentUser.role !== '管理者'){
+    document.getElementById('order-sheet-msg').textContent = '配送済みのため取消できません。';
+    return;
+  }
+
+  if(!confirm('この発注を取消しますか？')) return;
+
+  const exCancel = historyExtras(stockRowCheck);
+  let error;
+  if(currentUser.role === '管理者'){
+    ({ error } = await sbClient.from('stock_orders').update({ is_canceled: true }).eq('id', existingOrderId));
+    if(error){
+      document.getElementById('order-sheet-msg').textContent = '取消に失敗しました：' + error.message;
+      return;
+    }
+    // 管理者はcancel_stock_order関数を経由しないため、記録はここで行う
+    await logChange('stock_orders', existingOrderId, 'is_canceled', false, true, stockItemsCache.find(r => r.id === orderSheetState.stockItemId)?.item_name, undefined, undefined, exCancel.requesterName, exCancel.deliveryDate, exCancel.sizeTxt);
+  } else {
+    ({ error } = await sbClient.rpc('cancel_stock_order', { order_id: existingOrderId }));
+    if(error){
+      document.getElementById('order-sheet-msg').textContent = '取消に失敗しました：' + error.message;
+      return;
+    }
+    // change_historyへの記録はcancel_stock_order関数側で自動的に行われるため、ここでは呼ばない
+  }
+
+  // 発注を取消したら、対応する配送済み(グレー)表示も一緒に消す（キー単位の更新）
+  // 管理者だけがここで消す。管理者以外は、cancel_stock_order関数の中でDB側が消す（再読込で反映）
+  if(markCheck && currentUser.role === '管理者'){
+    const { error: markErr } = await sbClient.rpc('update_delivery_mark', { p_stock_item_id: stockItemId, p_mark_key: markKeyCheck, p_mark_value: null });
+    if(markErr){
+      console.error('[delivery_marks] 更新失敗:', markErr.message);
+    } else if(stockRowCheck){
+      const newMarks = { ...(stockRowCheck.delivery_marks || {}) };
+      delete newMarks[markKeyCheck];
+      stockRowCheck.delivery_marks = newMarks;
+    }
+  }
+
+  // 共通品の在庫は、取消した時にDB側の自動処理が戻す
+
+  // 個人品の場合、依頼側のステータスを「発注可能」に戻す（マイページに反映させるため）
+  if(itemType === 'individual' && stockRowCheck && stockRowCheck.request_item_date_id && !isSurplusRow(stockRowCheck)){
+    const { error: revertErr } = await sbClient
+      .from('request_item_dates')
+      .update({ status: '発注可能' })
+      .eq('id', stockRowCheck.request_item_date_id)
+      .eq('status', '発注済み・受取待ち');
+    if(!revertErr){
+      await logChange('request_item_dates', stockRowCheck.request_item_date_id, 'status', '発注済み・受取待ち', '発注可能', stockRowCheck.item_name, undefined, undefined, exCancel.requesterName, exCancel.deliveryDate, exCancel.sizeTxt);
+    }
+  }
+
+  closeOrderSheet();
+  await loadStockItems();
+}
+
+// =============================================
+// 個人依頼品の非表示・非表示解除（管理者のみ）
+// =============================================
+async function toggleHideStockItem(hide){
+  const { stockItemId } = orderSheetState;
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+
+  const confirmMsg = hide ? 'この品目を非表示にしますか？' : 'この品目の非表示を解除しますか？';
+  if(!confirm(confirmMsg)) return;
+
+  const nowIso = hide ? new Date().toISOString() : null;
+  const { error } = await sbClient
+    .from('stock_items')
+    .update({ is_hidden: hide, hidden_at: nowIso })
+    .eq('id', stockItemId);
+  if(error){
+    document.getElementById('order-sheet-msg').textContent = '処理に失敗しました：' + error.message;
+    return;
+  }
+
+  const exHide = historyExtras(row);
+  await logChange('stock_items', stockItemId, 'is_hidden', !hide, hide, row.item_name, undefined, undefined, exHide.requesterName, exHide.deliveryDate, exHide.sizeTxt);
+  row.is_hidden = hide;
+  row.hidden_at = nowIso;
+
+  closeOrderSheet();
+  await loadStockItems();
+}
+
+// =============================================
+// 補充シート（共通品・作業者/管理者のみ）
+// =============================================
+let replenishState = { stockItemId: null, qty: 1, mode: 'add' };
+
+function openReplenishSheet(stockItemId){
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+  replenishState = { stockItemId, qty: 1, mode: 'add' };
+
+  document.getElementById('replenish-title').textContent = displayItemName(row.item_name);
+  document.getElementById('replenish-current').innerHTML = `現在の在庫 <b>${row.stock_qty ?? 0}</b>`;
+  document.getElementById('replenish-qty-val').textContent = '1';
+  document.getElementById('replenish-msg').textContent = '';
+  document.getElementById('repl-mode-lbl-add').classList.add('selected');
+  document.getElementById('repl-mode-lbl-sub').classList.remove('selected');
+  document.querySelector('input[name="replenish-mode"][value="add"]').checked = true;
+  updateReplenishSubText();
+  document.getElementById('replenish-overlay').classList.add('show');
+}
+
+function updateReplenishSubText(){
+  const sub = document.getElementById('replenish-sub');
+  const btn = document.getElementById('replenish-submit-btn');
+  if(replenishState.mode === 'add'){
+    sub.textContent = '補充する数量を入力してください';
+    btn.textContent = 'この数を補充する';
+  } else {
+    sub.textContent = '実数に合わせて減らす数量を入力してください';
+    btn.textContent = 'この数だけ減らす';
+  }
+}
+
+function onReplenishModeChange(){
+  const mode = document.querySelector('input[name="replenish-mode"]:checked').value;
+  replenishState.mode = mode;
+  document.getElementById('repl-mode-lbl-add').classList.toggle('selected', mode === 'add');
+  document.getElementById('repl-mode-lbl-sub').classList.toggle('selected', mode === 'sub');
+  updateReplenishSubText();
+}
+
+function closeReplenishSheet(e){
+  if(e && e.target !== e.currentTarget) return;
+  document.getElementById('replenish-overlay').classList.remove('show');
+}
+
+function adjustReplenishQty(delta){
+  replenishState.qty = Math.max(1, replenishState.qty + delta);
+  document.getElementById('replenish-qty-val').textContent = replenishState.qty;
+}
+
+async function submitReplenish(){
+  const { stockItemId, qty, mode } = replenishState;
+  const stockRow = stockItemsCache.find(r => r.id === stockItemId);
+  if(!stockRow) return;
+
+  const delta = mode === 'add' ? -qty : qty; // adjust_stock_qtyはp_deltaを引く仕様のため、増やす時はマイナスで渡す
+  const { error } = await sbClient.rpc('adjust_stock_qty', { p_stock_item_id: stockItemId, p_delta: delta, p_action: 'replenish' });
+  if(error){
+    document.getElementById('replenish-msg').textContent = (mode === 'add' ? '補充' : '調整') + 'に失敗しました：' + error.message;
+    return;
+  }
+
+  closeReplenishSheet();
+  await loadStockItems();
+}
+
+// =============================================
+// 最低数ライン編集シート（共通品・管理者のみ）
+// =============================================
+let minLineState = { stockItemId: null };
+
+function openMinLineSheet(stockItemId){
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+  minLineState = { stockItemId };
+
+  document.getElementById('min-line-title').textContent = displayItemName(row.item_name);
+  document.getElementById('min-line-input').value = row.min_line ?? 0;
+  document.getElementById('min-line-msg').textContent = '';
+  document.getElementById('min-line-overlay').classList.add('show');
+}
+
+function closeMinLineSheet(e){
+  if(e && e.target !== e.currentTarget) return;
+  document.getElementById('min-line-overlay').classList.remove('show');
+}
+
+async function submitMinLine(){
+  const { stockItemId } = minLineState;
+  const input = document.getElementById('min-line-input');
+  const newMinLine = parseInt(input.value, 10);
+  const msgEl = document.getElementById('min-line-msg');
+
+  if(isNaN(newMinLine) || newMinLine < 0){
+    msgEl.textContent = '0以上の数値を入力してください。';
+    return;
+  }
+
+  const { error } = await sbClient.from('stock_items').update({ min_line: newMinLine }).eq('id', stockItemId);
+  if(error){
+    msgEl.textContent = '保存に失敗しました：' + error.message;
+    return;
+  }
+
+  closeMinLineSheet();
+  await loadStockItems();
+}
+
+// =============================================
+// データ読み込み・再描画
+// =============================================
+async function loadTeams(){
+  const { data, error } = await sbClient
+    .from('team_master')
+    .select('id, team_name, sort_order')
+    .eq('is_hidden', false)
+    .order('sort_order', { ascending: true });
+  teams = error ? [] : (data || []);
+}
+
+async function loadColorMaster(){
+  const { data, error } = await sbClient
+    .from('color_master')
+    .select('id, color_name, color_code, sort_order')
+    .order('sort_order', { ascending: true });
+  colorMasterCache = error ? [] : (data || []);
+}
+
+function todayYmdLocal(){
+  const d = getAdjustedNow();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// =============================================
+// 15時解除時の一括確定は、DB側の run_daily_finalization 関数が担当する。
+// 通常はpg_cronが毎分呼んで自動実行する。ここは「画面を開いた時の安全網」で、
+// cronが止まっていた日に備えて同じ関数を呼ぶだけ。
+// 時刻・実行済みの判定はすべて関数側で行うため、誰が何度呼んでも二重には実行されない。
+// =============================================
+async function triggerServerFinalization(){
+  if(!lockSettings.end) return false;
+  const now = getAdjustedNow();
+  const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':00';
+  if(nowStr < lockSettings.end) return false;
+
+  const { data, error } = await sbClient.rpc('run_daily_finalization');
+  if(error){
+    console.error('[一括確定] 失敗:', error.message);
+    return false;
+  }
+  return data === true;
+}
+
+async function loadStockItems(){
+  await loadLockSettings();
+  updateLockBanner();
+  await loadTeams();
+  await loadColorMaster();
+  await triggerServerFinalization();
+
+  const { data: items, error: itemsErr } = await sbClient
+    .from('stock_items')
+    .select('id, item_type, item_name, size_l, size_w, size_h, requester_name, stock_qty, min_line, request_item_date_id, delivery_marks, is_hidden, hidden_at')
+    .eq('is_deleted', false)
+    .order('sort_order', { ascending: true })
+    .order('item_name', { ascending: true })
+    .order('id', { ascending: true });
+
+  if(itemsErr){
+    document.getElementById('load-error').style.display = 'block';
+    document.getElementById('load-error').textContent = '在庫データの取得に失敗しました：' + itemsErr.message;
+    return;
+  }
+  document.getElementById('load-error').style.display = 'none';
+  stockItemsCache = items || [];
+
+  const dateIds = stockItemsCache
+    .filter(r => r.item_type === 'individual' && r.request_item_date_id)
+    .map(r => r.request_item_date_id);
+
+  dateInfoCache = {};
+  if(dateIds.length){
+    const { data: dateRows } = await sbClient
+      .from('request_item_dates')
+      .select('id, delivery_date, qty, canceled_at, request_items ( is_urgent, team_master ( team_abbr ) )')
+      .in('id', dateIds);
+    (dateRows || []).forEach(d => {
+      dateInfoCache[d.id] = {
+        delivery_date: d.delivery_date,
+        qty: d.qty,
+        canceled_at: d.canceled_at,
+        is_urgent: !!(d.request_items && d.request_items.is_urgent),
+        team_abbr: (d.request_items && d.request_items.team_master && d.request_items.team_master.team_abbr) || ''
+      };
+    });
+  }
+
+  const { data: orders, error: ordersErr } = await sbClient
+    .from('stock_orders')
+    .select('id, stock_item_id, team_id, operated_by_email, operated_by_name, destination, recipient_name, mode, qty, desired_date, is_proxy, is_first_wave, color_id')
+    .eq('is_canceled', false)
+    .eq('is_finalized', false)
+    .order('created_at', { ascending: true });
+
+  ordersCache = {};
+  if(!ordersErr && orders){
+    orders.forEach(o=>{
+      if(!ordersCache[o.stock_item_id]) ordersCache[o.stock_item_id] = [];
+      ordersCache[o.stock_item_id].push(o);
+    });
+  }
+
+  // 確定済み（取消されていない）発注：残り数量の計算と、管理者の確定後の取消に使う
+  const { data: finOrders, error: finErr } = await sbClient
+    .from('stock_orders')
+    .select('id, stock_item_id, team_id, operated_by_name, mode, qty, desired_date, is_proxy, qty_reserved')
+    .eq('is_canceled', false)
+    .eq('is_finalized', true)
+    .order('created_at', { ascending: true });
+
+  finalizedOrdersCache = {};
+  if(!finErr && finOrders){
+    finOrders.forEach(o => {
+      if(!finalizedOrdersCache[o.stock_item_id]) finalizedOrdersCache[o.stock_item_id] = [];
+      finalizedOrdersCache[o.stock_item_id].push(o);
+    });
+  }
+
+  const individualRows = stockItemsCache.filter(individualVisibleFilter);
+  const commonRows = stockItemsCache.filter(r => r.item_type === 'common' && !r.is_hidden);
+
+  renderIndividualTable(individualRows);
+  renderCommonTable(commonRows);
+}
+
+// =============================================
+// 個人依頼品：長押し（管理者のみ）→ 在庫データ削除確認シート
+// =============================================
+let deleteTargetStockItemId = null;
+let indPressTimer = null;
+let indLongPressFired = false;
+let indPressStartXY = null;
+
+function bindIndividualLongPress(){
+  const root = document.getElementById('individual-table-wrap');
+  if(!root) return;
+  if(currentUser.role !== '管理者') return;
+
+  // 発注欄以外（行全体）を長押し → 削除確認シート（誤って完成にした時の取消用）
+  // 発注欄マス目は対象外（タップ操作は各セルのonclickに任せる）
+  root.onpointerdown = (e) => {
+    const field = e.target.closest ? e.target.closest('.order-field') : null;
+    if(field) return;
+    const row = e.target.closest ? e.target.closest('.indiv-row') : null;
+    if(!row) return;
+    indLongPressFired = false;
+    indPressStartXY = { x:e.clientX, y:e.clientY };
+    clearTimeout(indPressTimer);
+
+    row.classList.add('pressing');
+    indPressTimer = setTimeout(() => {
+      indLongPressFired = true;
+      row.classList.remove('pressing');
+      openDeleteSheet(row.dataset.stockItemId);
+    }, 600);
+  };
+  ['pointerup','pointerleave','pointercancel'].forEach(evt => {
+    root.addEventListener(evt, (e) => {
+      clearTimeout(indPressTimer);
+      const row = e.target.closest ? e.target.closest('.indiv-row') : null;
+      if(row) row.classList.remove('pressing');
+    });
+  });
+  root.addEventListener('pointermove', (e) => {
+    if(!indPressStartXY) return;
+    const dx = Math.abs(e.clientX - indPressStartXY.x), dy = Math.abs(e.clientY - indPressStartXY.y);
+    if(dx > 10 || dy > 10) clearTimeout(indPressTimer);
+  });
+  root.addEventListener('click', (e) => {
+    if(indLongPressFired){
+      indLongPressFired = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+}
+
+
+async function cycleDeliveryMark(stockItemId, markKey){
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+
+  const previousMarks = { ...(row.delivery_marks || {}) };
+  const marks = { ...previousMarks };
+  const current = marks[markKey] || null;
+  const next = current === null ? 'prep' : (current === 'prep' ? 'delivered' : null);
+  if(next === null) delete marks[markKey]; else marks[markKey] = next;
+
+  row.delivery_marks = marks;
+  const individualRows = stockItemsCache.filter(individualVisibleFilter);
+  const commonRows = stockItemsCache.filter(r => r.item_type === 'common' && !r.is_hidden);
+  renderIndividualTable(individualRows);
+  renderCommonTable(commonRows);
+
+  const { error } = await sbClient.rpc('update_delivery_mark', { p_stock_item_id: stockItemId, p_mark_key: markKey, p_mark_value: next });
+  if(error){
+    console.error('[delivery_marks] 更新失敗:', error.message);
+    row.delivery_marks = previousMarks;
+    const individualRowsRb = stockItemsCache.filter(individualVisibleFilter);
+    const commonRowsRb = stockItemsCache.filter(r => r.item_type === 'common' && !r.is_hidden);
+    renderIndividualTable(individualRowsRb);
+    renderCommonTable(commonRowsRb);
+    alert('配送済みマークの更新に失敗しました。もう一度お試しください。');
+    return;
+  }
+  // change_historyへの記録はupdate_delivery_mark関数側で自動的に行われるため、ここでは呼ばない
+
+  // 15時の一括処理が既に今日実行済みの後で新たに配送済みにした場合（臨時便など）は、
+  // 自動では確定させず、管理者に確認したうえで手動で確定させる
+  if(next === 'delivered' && lockSettings.end){
+    const now = getAdjustedNow();
+    const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':00';
+    if(nowStr >= lockSettings.end){
+      const { data: settingsRow } = await sbClient
+        .from('business_settings')
+        .select('id, finalization_last_date')
+        .limit(1)
+        .maybeSingle();
+      if(settingsRow && settingsRow.finalization_last_date === todayYmdLocal()){
+        const doFinalize = confirm('本日の一括処理はすでに完了しています。この分を今すぐ確定させますか？\n（「キャンセル」を選ぶと、グレー表示のまま次回の一括処理まで待機します）');
+        if(doFinalize){
+          const { error: finError } = await sbClient.rpc('finalize_delivery_mark', { p_stock_item_id: stockItemId, p_mark_key: markKey });
+          if(finError){
+            alert('確定処理に失敗しました：' + finError.message);
+          }
+          await loadStockItems();
+        }
+      }
+    }
+  }
+}
+
+function openDeleteSheet(stockItemId){
+  const row = stockItemsCache.find(r => r.id === stockItemId);
+  if(!row) return;
+  deleteTargetStockItemId = stockItemId;
+
+  const dateInfo = row.request_item_date_id ? dateInfoCache[row.request_item_date_id] : null;
+  const teamBadge = (dateInfo && dateInfo.team_abbr) ? `<span class="ir-team">${escapeHtml(dateInfo.team_abbr)}</span>` : '';
+  const sizeText = [row.size_l, row.size_w, row.size_h].filter(v=>v!=null).join('×');
+  document.getElementById('delete-sheet-detail').innerHTML = `
+    <div class="detail-line"><b>品名</b>${teamBadge}${escapeHtml(displayItemName(row.item_name))}</div>
+    <div class="detail-line"><b>サイズ</b>${escapeHtml(sizeText)}</div>
+    <div class="detail-line"><b>依頼者</b>${escapeHtml(requesterLabelFor(row) || '（不明）')}</div>
+    <div class="detail-line"><b>在庫数</b>${row.stock_qty ?? 0}</div>`;
+  document.getElementById('delete-sheet-msg').textContent = '';
+  document.getElementById('delete-sheet-overlay').classList.add('show');
+}
+
+function closeDeleteSheet(e){
+  if(e && e.target !== e.currentTarget) return;
+  document.getElementById('delete-sheet-overlay').classList.remove('show');
+  deleteTargetStockItemId = null;
+}
+
+async function confirmDeleteStockItem(){
+  if(!deleteTargetStockItemId) return;
+  const row = stockItemsCache.find(r => r.id === deleteTargetStockItemId);
+  if(!row) return;
+
+  if(!confirm(`「${row.item_name}」の在庫データを削除します。元の依頼は作業カレンダー上で未完成の状態に戻ります。よろしいですか？`)) return;
+
+  const msgEl = document.getElementById('delete-sheet-msg');
+
+  const { data: activeOrders, error: checkErr } = await sbClient
+    .from('stock_orders')
+    .select('id')
+    .eq('stock_item_id', deleteTargetStockItemId)
+    .eq('is_canceled', false);
+
+  if(checkErr){
+    msgEl.textContent = '発注状況の確認に失敗しました：' + checkErr.message;
+    return;
+  }
+  if(activeOrders && activeOrders.length){
+    msgEl.textContent = '発注が入っているため削除できません。先に発注を取消してください。';
+    return;
+  }
+
+  const { error: delErr } = await sbClient.from('stock_items').update({ is_deleted: true, request_item_date_id: null }).eq('id', deleteTargetStockItemId);
+  if(delErr){
+    msgEl.textContent = '削除に失敗しました：' + delErr.message;
+    return;
+  }
+
+  if(row.request_item_date_id){
+    const { error: updErr } = await sbClient
+      .from('request_item_dates')
+      .update({ completed: false, reflected_to_stock: false })
+      .eq('id', row.request_item_date_id);
+    if(updErr){
+      msgEl.textContent = '在庫データは削除しましたが、依頼側の状態を戻す処理に失敗しました：' + updErr.message;
+      return;
+    }
+    const exDel = historyExtras(row);
+    await logChange('request_item_dates', row.request_item_date_id, 'completed', true, false, row.item_name, undefined, undefined, exDel.requesterName, exDel.deliveryDate, exDel.sizeTxt);
+    await logChange('request_item_dates', row.request_item_date_id, 'reflected_to_stock', true, false, row.item_name, undefined, undefined, exDel.requesterName, exDel.deliveryDate, exDel.sizeTxt);
+  }
+
+  document.getElementById('delete-sheet-overlay').classList.remove('show');
+  deleteTargetStockItemId = null;
+  await loadStockItems();
+}
+
+// =============================================
+// 認証
+// =============================================
+async function loginWithGoogle(){
+  const { error } = await sbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error){
+    document.getElementById('auth-msg').textContent = 'ログインに失敗しました：' + error.message;
+  }
+}
+
+async function initAuth(){
+  const { data: { user } } = await sbClient.auth.getUser();
+
+  if(!user){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-login').style.display='block';
+    return;
+  }
+
+  const { data: allowRow, error: allowErr } = await sbClient
+    .from('users_allowlist')
+    .select('name, role, can_mark_delivery, team')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if(allowErr || !allowRow || !allowRow.name){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-denied').style.display='block';
+    return;
+  }
+
+  currentUser.email = user.email;
+  currentUser.name = allowRow.name;
+  currentUser.role = allowRow.role;
+  currentUser.can_mark_delivery = allowRow.can_mark_delivery === true;
+  currentUser.team = allowRow.team || null;
+
+  document.getElementById('login-name-display').textContent = currentUser.name;
+  document.getElementById('auth-loading').style.display='none';
+  document.getElementById('app-content').style.display='block';
+  document.getElementById('delivery-mode-row').style.display = canMarkDelivery() ? 'flex' : 'none';
+  document.getElementById('show-hidden-row').style.display = currentUser.role === '管理者' ? 'flex' : 'none';
+
+  await syncServerTime();
+  await loadStockItems();
+  renderFooterNav(currentUser.role, 'stock');
+subscribeRealtime();
+}
+
+let realtimeReloadPending = false;
+
+function isAnySheetOpen(){
+  return document.getElementById('order-sheet-overlay').classList.contains('show')
+      || document.getElementById('replenish-overlay').classList.contains('show')
+      || document.getElementById('delete-sheet-overlay').classList.contains('show')
+      || document.getElementById('min-line-overlay').classList.contains('show');
+}
+
+function requestStockReload(){
+  if(isAnySheetOpen()){ realtimeReloadPending = true; return; }
+  loadStockItems();
+}
+
+function subscribeRealtime(){
+  sbClient
+    .channel('stock_view_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, requestStockReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_orders' }, requestStockReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_deliveries' }, requestStockReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_master' }, requestStockReload)
+    .subscribe();
+
+  setInterval(() => {
+    if(realtimeReloadPending && !isAnySheetOpen()){
+      realtimeReloadPending = false;
+      loadStockItems();
+    }
+  }, 1500);
+
+  setInterval(async () => {
+    if(isAnySheetOpen()) return;
+    const wasLocked = isLocked;
+    await syncServerTime();
+    await loadLockSettings();
+    updateLockBanner();
+    const changed = await triggerServerFinalization();
+    if(changed || wasLocked !== isLocked) loadStockItems();
+  }, 60000);
+}
+
+// =============================================
+// 共通フッターナビ（依頼者・作業者はタブバー／管理者はホームへ戻るリンク）
+// =============================================
+(function(){
+  const style = document.createElement('style');
+  style.textContent = `
+.footer-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(255,255,255,0.96);backdrop-filter:blur(6px);border-top:1px solid #7c8798;padding:7px 4px calc(13px + env(safe-area-inset-bottom));font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic',YuGothic,sans-serif;}
+.footer-tabbar .ftab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#A2A8B3;text-decoration:none;font-size:9px;font-weight:700;cursor:pointer;background:none;border:none;font-family:inherit;}
+.footer-tabbar .ftab svg{width:20px;height:20px;}
+.footer-tabbar .ftab.active{color:#1E3766;}
+.footer-back-link{position:fixed;top:14px;left:14px;z-index:40;display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #7c8798;border-radius:999px;padding:7px 14px 7px 10px;font-size:12px;font-weight:700;color:#1E3766;text-decoration:none;white-space:nowrap;box-shadow:0 6px 14px rgba(20,22,26,0.08);font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic',YuGothic,sans-serif;}
+.footer-back-link svg{width:16px;height:16px;flex-shrink:0}
+`;
+  document.head.appendChild(style);
+})();
+
+const FNAV_ICONS = {
+  home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/>',
+  form: '<path d="M4 3h13l4 4v14a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  stock: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>',
+  user: '<circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4.2-6 7-6s5.8 2 7 6"/>',
+  wrench: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.6-.6-.6-2.6z"/>',
+  doc: '<path d="M6 3h9l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h3M8 16h6M8 10h2"/>',
+  back: '<path d="M19 12H5M11 18l-6-6 6-6"/>'
+};
+function fIcon(name){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${FNAV_ICONS[name]}</svg>`;
+}
+
+function renderFooterNav(role, activeKey){
+  const NAV_URLS = {
+    home: 'home.html', form: 'formB_size.html', mypage: 'mypage.html',
+    stock: 'stock_view.html', workCalendar: 'work_calendar.html', requestCalendar: 'request_calendar.html'
+  };
+
+  if(role === '管理者'){
+    const back = document.createElement('a');
+    back.href = NAV_URLS.home;
+    back.className = 'footer-back-link';
+    back.innerHTML = fIcon('back') + '<span>ホームへ</span>';
+    document.body.appendChild(back);
+    return;
+  }
+
+  const bar = document.createElement('div');
+  bar.className = 'footer-tabbar';
+
+  if(role === '作業者'){
+    bar.innerHTML = `
+      <a class="ftab ${activeKey==='home'?'active':''}" href="${NAV_URLS.home}">${fIcon('home')}<span>ホーム</span></a>
+      <button class="ftab" onclick="alert('準備中の機能です。')">${fIcon('wrench')}<span>作業工程</span></button>
+      <a class="ftab ${activeKey==='workCalendar'?'active':''}" href="${NAV_URLS.workCalendar}">${fIcon('calendar')}<span>カレンダー</span></a>
+      <button class="ftab" onclick="alert('準備中の機能です。')">${fIcon('doc')}<span>手順書</span></button>
+      <a class="ftab ${activeKey==='stock'?'active':''}" href="${NAV_URLS.stock}">${fIcon('stock')}<span>在庫</span></a>`;
+  } else {
+    bar.innerHTML = `
+      <a class="ftab ${activeKey==='home'?'active':''}" href="${NAV_URLS.home}">${fIcon('home')}<span>ホーム</span></a>
+      <a class="ftab ${activeKey==='form'?'active':''}" href="${NAV_URLS.form}">${fIcon('form')}<span>依頼</span></a>
+      <a class="ftab ${activeKey==='requestCalendar'?'active':''}" href="${NAV_URLS.requestCalendar}">${fIcon('calendar')}<span>カレンダー</span></a>
+      <a class="ftab ${activeKey==='stock'?'active':''}" href="${NAV_URLS.stock}">${fIcon('stock')}<span>在庫</span></a>
+      <a class="ftab ${activeKey==='mypage'?'active':''}" href="${NAV_URLS.mypage}">${fIcon('user')}<span>マイページ</span></a>`;
+  }
+
+  document.body.appendChild(bar);
+  document.body.style.paddingBottom = '68px';
+}
+
+initAuth();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("service-worker.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

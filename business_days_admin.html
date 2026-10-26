@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理設定</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2430;
+  --ink-soft:#6B7480;
+  --ink-faint:#A2A8B3;
+  --line:#E4E7EC;
+  --bg-page:#EEF1F5;
+  --white:#FFFFFF;
+  --accent:#2A4B8D;
+  --accent-deep:#1E3766;
+  --accent-soft:#E6ECF7;
+  --alert:#C4531F;
+  --alert-soft:#FBEAE0;
+  --amber:#B98418;
+  --amber-soft:#FAF0DE;
+  --ready:#2F7D4F;
+  --ready-soft:#E4F3E8;
+  --muted:#8B93A0;
+  --muted-soft:#F0F1F3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'M PLUS Rounded 1c',sans-serif;background:var(--bg-page);color:var(--ink);min-height:100vh}
+.container{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:18px;font-weight:800;color:var(--accent-deep);border-bottom:2px solid var(--accent-deep);padding-bottom:8px;margin-bottom:20px}
+p.desc{font-size:12px;color:var(--ink-soft);margin-bottom:16px;line-height:1.6}
+
+.login-box{max-width:360px;margin:80px auto;text-align:center}
+.login-box h1{border:none;margin-bottom:20px}
+.btn-google{padding:13px 24px;background:var(--accent);color:#fff;border:none;border-radius:999px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
+.btn-google:hover{background:var(--accent-deep)}
+#auth-loading{text-align:center;padding:60px 0;color:var(--ink-soft);font-size:14px}
+.login-name-bar{font-size:12px;color:var(--ink-soft);background:var(--accent-soft);padding:8px 12px;border-radius:10px;margin-bottom:14px}
+
+/* ================= ADMIN SHELL (home.htmlと共通の左メニュー方式) ================= */
+.admin-shell{ width:100%; display:flex; min-height:100vh; align-items:stretch; }
+.admin-sidebar{ width:80px; flex:0 0 auto; background:var(--accent-deep); display:flex; flex-direction:column; align-items:center; padding:20px 0 12px; }
+.admin-sidebar .as-logo{ color:#fff; font-size:21px; margin-bottom:20px; }
+.as-nav{ display:flex; flex-direction:column; gap:5px; width:100%; align-items:center; }
+.as-item{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 3px; color:rgba(255,255,255,0.6); cursor:pointer; border-radius:11px; width:64px; text-decoration:none; }
+.as-item svg{ width:18px; height:18px; }
+.as-item .as-label{ font-size:8.3px; font-weight:700; text-align:center; line-height:1.25; }
+.as-item:hover{ background:rgba(255,255,255,0.09); color:#fff; }
+.as-item.active{ background:rgba(255,255,255,0.18); color:#fff; }
+.admin-main{ flex:1 1 auto; min-width:0; background:var(--bg-page); }
+@media (max-width:640px){
+  .admin-sidebar{ width:60px; }
+  .as-item{ width:48px; }
+  .container{ padding:18px 12px 40px; }
+}
+
+.card{background:var(--white);border-radius:14px;box-shadow:0 1px 4px rgba(20,22,26,.08);padding:18px;margin-bottom:14px}
+.form-group{margin-bottom:12px}
+.notif-setting-row{ display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; }
+.notif-toggle{ position:relative; width:40px; height:22px; flex-shrink:0; }
+.notif-toggle input{ opacity:0; width:0; height:0; }
+.notif-toggle .track{ position:absolute; inset:0; background:#D8DCE1; border-radius:999px; transition:.15s; cursor:pointer; }
+.notif-toggle .track::before{ content:''; position:absolute; width:18px; height:18px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.notif-toggle input:checked + .track{ background:var(--accent); }
+.notif-toggle input:checked + .track::before{ transform:translateX(18px); }
+label{display:block;font-size:12px;font-weight:800;color:var(--ink-soft);margin-bottom:3px}
+input[type="date"],input[type="text"]{
+  width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;
+  font-size:14px;font-family:inherit;background:#fff;
+}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+
+.toggle-row{display:flex;gap:8px;margin-top:2px}
+.toggle-row label{font-size:13px;font-weight:normal;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:0}
+.toggle-row input[type="radio"]{display:none}
+.toggle-row label.selected-business{border-color:var(--ready);background:var(--ready-soft);color:var(--ready);font-weight:800}
+.toggle-row label.selected-holiday{border-color:var(--alert);background:var(--alert-soft);color:var(--alert);font-weight:800}
+
+.btn-submit{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer}
+.btn-submit:hover{background:var(--accent-deep)}
+.btn-submit:disabled{background:var(--muted);cursor:not-allowed}
+
+#form-msg{margin-top:10px;font-size:13px;text-align:center;padding:8px;border-radius:8px;display:none}
+#form-msg.ok{display:block;color:var(--ready);background:var(--ready-soft);border:1px solid var(--ready)}
+#form-msg.err{display:block;color:var(--alert);background:var(--alert-soft);border:1px solid var(--alert)}
+
+.list-title{font-size:14px;font-weight:800;color:var(--accent-deep);margin-bottom:10px}
+.ex-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border-radius:12px;box-shadow:0 1px 4px rgba(20,22,26,.06);padding:10px 14px;margin-bottom:8px}
+.ex-row .ex-date{font-size:14px;font-weight:800;color:var(--accent-deep);min-width:100px}
+.ex-row .ex-status{font-size:12px;font-weight:800;padding:3px 8px;border-radius:10px}
+.ex-row .ex-status.business{background:var(--ready-soft);color:var(--ready)}
+.ex-row .ex-status.holiday{background:var(--alert-soft);color:var(--alert)}
+.ex-row .ex-note{font-size:12px;color:var(--ink-faint);flex:1}
+.btn-delete{font-size:12px;color:var(--alert);background:none;border:1px solid var(--alert);border-radius:8px;padding:4px 10px;cursor:pointer;flex-shrink:0}
+.btn-delete:hover{background:var(--alert-soft)}
+
+.empty-msg{text-align:center;color:var(--ink-faint);font-size:13px;padding:20px 0}
+.minline-edit{margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.minline-edit label{font-size:11px;color:var(--ink-faint)}
+.minline-edit input{width:60px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.btn-small{font-size:11px;padding:5px 10px;border:none;border-radius:8px;background:var(--accent-deep);color:#fff;cursor:pointer}
+.minline-msg{font-size:11px;color:var(--ready)}
+#load-error{text-align:center;color:var(--alert);font-size:13px;padding:20px 0}
+
+.tab-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tab-btn{flex-shrink:0;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--white);color:var(--ink-soft);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+.tab-btn.active{background:var(--accent-deep);color:#fff;border-color:var(--accent-deep)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--white);border-radius:12px;box-shadow:0 1px 4px rgba(20,22,26,.06);padding:10px 14px;margin-bottom:8px}
+.mrow .mrow-main{font-size:13px;color:var(--ink);flex:1;line-height:1.5}
+.mrow .mrow-sub{font-size:11px;color:var(--ink-faint)}
+select.role-select{font-size:12px;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
+.badge{display:inline-block;margin-left:4px;background:var(--alert);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800}
+.mrow-btns{display:flex;gap:6px;flex-shrink:0}
+.btn-approve{font-size:12px;color:var(--ready);background:none;border:1px solid var(--ready);border-radius:8px;padding:4px 10px;cursor:pointer}
+.btn-approve:hover{background:var(--ready-soft)}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+<div id="auth-loading">読み込み中...</div>
+
+<div id="auth-login" class="login-box" style="display:none">
+  <h1>⚙️ 管理設定</h1>
+  <button class="btn-google" onclick="loginWithGoogle()">Googleでログイン</button>
+  <div id="auth-msg" style="margin-top:14px;font-size:13px;color:var(--alert)"></div>
+</div>
+
+<div id="auth-denied" class="login-box" style="display:none">
+  <h1>⚙️ 管理設定</h1>
+  <p style="font-size:14px;color:var(--alert)">このページは管理者のみ利用できます。</p>
+</div>
+
+<div class="admin-shell" id="admin-shell" style="display:none">
+  <div class="admin-sidebar">
+    <div class="as-logo">🪵</div>
+    <div class="as-nav" id="adminSidebarNav"></div>
+  </div>
+  <div class="admin-main">
+    <div class="container">
+
+<div id="app-content" style="display:none">
+  <h1>⚙️ 管理設定</h1>
+
+  <div class="login-name-bar">ログイン中：<span id="login-name-display"></span> さん</div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="holiday" onclick="switchTab('holiday')">営業日設定</button>
+    <button class="tab-btn" data-tab="size" onclick="switchTab('size')">サイズ管理</button>
+    <button class="tab-btn" data-tab="clients" onclick="switchTab('clients')">客先管理</button>
+    <button class="tab-btn" data-tab="users" onclick="switchTab('users')">ユーザー管理</button>
+    <button class="tab-btn" data-tab="stock" onclick="switchTab('stock')">共通品管理</button>
+    <button class="tab-btn" data-tab="team" onclick="switchTab('team')">班管理</button>
+    <button class="tab-btn" data-tab="color" onclick="switchTab('color')">色管理</button>
+    <button class="tab-btn" data-tab="newsize" onclick="switchTab('newsize')">新サイズ承認待ち<span id="newsize-badge" class="badge" style="display:none"></span></button>
+    <button class="tab-btn" data-tab="locktime" onclick="switchTab('locktime')">ロック時間</button>
+    <button class="tab-btn" data-tab="notif" onclick="switchTab('notif')">通知設定</button>
+  </div>
+
+  <div id="tab-holiday" class="tab-panel active">
+  <p class="desc">祝日や特定の土曜出勤など、通常の週間パターンでは表現しきれない日付だけの例外を登録します。</p>
+
+  <div class="card">
+    <div class="form-group">
+      <label>日付</label>
+      <input type="date" id="ex-date">
+    </div>
+    <div class="form-group">
+      <label>この日の扱い</label>
+      <div class="toggle-row" id="status-row">
+        <label class="selected-business" id="lbl-business"><input type="radio" name="ex-status" value="business" checked onchange="updateStatusStyle()"> 営業</label>
+        <label id="lbl-holiday"><input type="radio" name="ex-status" value="holiday" onchange="updateStatusStyle()"> 休業</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <input type="text" id="ex-note" placeholder="例：創立記念日、振替出勤など">
+    </div>
+    <button class="btn-submit" id="btn-add" onclick="submitException()">登録する</button>
+    <div id="form-msg"></div>
+  </div>
+
+  <div class="list-title">登録済みの例外日</div>
+  <div id="ex-list"></div>
+  <div id="load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-size" class="tab-panel">
+  <p class="desc">依頼フォームで選べるサイズ一覧です。大分類・サイズは必須、中分類は「工機」など内部で細分化が必要な場合だけ入力してください。</p>
+
+  <div class="card">
+    <div class="form-group"><label>大分類（カテゴリ）</label><input type="text" id="sz-cat" placeholder="例：本箱、工機など"></div>
+    <div class="form-group"><label>中分類（任意）</label><input type="text" id="sz-sub" placeholder="工機の場合のみ入力"></div>
+    <div class="form-group"><label>サイズ</label><input type="text" id="sz-size" placeholder="例：300×200×150"></div>
+    <button class="btn-submit" id="btn-size-add" onclick="submitSize()">登録する</button>
+    <div id="size-msg"></div>
+  </div>
+
+  <div class="list-title">登録済みサイズ</div>
+  <div class="form-group"><input type="text" id="sz-search" placeholder="カテゴリ・サイズで絞り込み" oninput="renderSizeList()"></div>
+  <div id="size-list"></div>
+  <div id="size-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-clients" class="tab-panel">
+  <p class="desc">依頼フォームの客先名候補です。</p>
+
+  <div class="card">
+    <div class="form-group"><label>客先名</label><input type="text" id="cl-name" placeholder="客先名"></div>
+    <button class="btn-submit" id="btn-client-add" onclick="submitClient()">登録する</button>
+    <div id="client-msg"></div>
+  </div>
+
+  <div class="list-title">登録済み客先</div>
+  <div class="form-group"><input type="text" id="cl-search" placeholder="客先名で絞り込み" oninput="renderClientList()"></div>
+  <div id="client-list"></div>
+  <div id="client-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-users" class="tab-panel">
+  <p class="desc">ログインを許可するユーザーです。ここで追加しただけではログインできません。Google Cloud ConsoleのTest usersにも同じメールアドレスを追加してください。</p>
+
+  <div class="card">
+    <div class="form-group"><label>メールアドレス（Googleアカウント）</label><input type="text" id="us-email" placeholder="example@gmail.com"></div>
+    <div class="form-group"><label>名前（表示名）</label><input type="text" id="us-name" placeholder="山田太郎"></div>
+    <div class="form-group">
+      <label>役割</label>
+      <select id="us-role" style="width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:4px;font-size:14px;font-family:inherit">
+        <option value="依頼者">依頼者</option>
+        <option value="作業者">作業者</option>
+        <option value="管理者">管理者</option>
+      </select>
+    </div>
+    <button class="btn-submit" id="btn-user-add" onclick="submitUser()">登録する</button>
+    <div id="user-msg"></div>
+  </div>
+
+  <div class="list-title">登録済みユーザー</div>
+  <div id="user-list"></div>
+  <div id="user-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-stock" class="tab-panel">
+  <p class="desc">在庫表に表示される共通品の一覧です。品目を削除すると過去の発注・補充履歴の紐付けが壊れるおそれがあるため、削除ではなく非表示にする運用です。非表示にした品目は在庫表から消え、いつでもここから再表示できます。</p>
+
+  <div class="card">
+    <div class="form-group"><label>品目名</label><input type="text" id="st-name" placeholder="例：C1300"></div>
+    <button class="btn-submit" id="btn-stock-add" onclick="submitStockItem()">登録する</button>
+    <div id="stock-msg"></div>
+  </div>
+
+  <div class="list-title">表示中の品目</div>
+  <div id="stock-list-visible"></div>
+  <div class="list-title" style="margin-top:20px">非表示の品目</div>
+  <div id="stock-list-hidden"></div>
+  <div id="stock-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-team" class="tab-panel">
+  <p class="desc">在庫表・依頼フォームで使う班の一覧です。削除ではなく非表示で管理します。</p>
+
+  <div class="card">
+    <div class="form-group"><label>班名</label><input type="text" id="tm-name" placeholder="例：新工場"></div>
+    <div class="form-group"><label>略号（1文字）</label><input type="text" id="tm-abbr" placeholder="例：新" maxlength="1"></div>
+    <button class="btn-submit" id="btn-team-add" onclick="submitTeam()">登録する</button>
+    <div id="team-msg"></div>
+  </div>
+
+  <div class="list-title">表示中の班</div>
+  <div id="team-list-visible"></div>
+  <div class="list-title" style="margin-top:20px">非表示の班</div>
+  <div id="team-list-hidden"></div>
+  <div id="team-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-color" class="tab-panel">
+  <p class="desc">個人依頼品の発注時に選べる色の一覧です。ここに登録した色が、発注シートの色選択に表示されます。</p>
+
+  <div class="card">
+    <div class="form-group"><label>色の名前</label><input type="text" id="cl-name" placeholder="例：黒"></div>
+    <div class="form-group"><label>色</label><input type="color" id="cl-code" value="#1a3a5c"></div>
+    <button class="btn-submit" id="btn-color-add" onclick="submitColor()">登録する</button>
+    <div id="color-msg"></div>
+  </div>
+
+  <div class="list-title">登録済みの色</div>
+  <div id="color-list"></div>
+  <div id="color-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-newsize" class="tab-panel">
+  <p class="desc">依頼フォームで「新サイズ」として送信された内容の一覧です。既にカテゴリ一覧にあるカテゴリのサイズは「サイズ登録する」で1件ずつ登録できます。まだ一覧にない新しいカテゴリは、そのカテゴリ名で累計（過去に承認・却下した分も含む）がしきい値に達するまでカテゴリ一覧に反映されず、達した時点で「カテゴリ一覧に昇格する」ボタンから一括登録します。「登録しない」を押すと一覧から消えるだけで、依頼データ自体は削除されません。</p>
+
+  <div class="card">
+    <div class="form-group"><label>登録推奨にする最低件数</label><input type="number" id="ncat-threshold" min="1" style="width:120px"></div>
+    <button class="btn-submit" id="btn-ncat-threshold-save" onclick="submitNewCategoryThreshold()">保存する</button>
+    <div id="ncat-threshold-msg"></div>
+  </div>
+
+  <div id="newsize-list"></div>
+  <div id="newsize-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-locktime" class="tab-panel">
+  <p class="desc">在庫表・マイページで発注や取消をロックする時間帯を設定します。</p>
+
+  <div class="card">
+    <div class="form-group"><label>ロック開始時刻</label><input type="time" id="lt-start"></div>
+    <div class="form-group"><label>ロック終了時刻</label><input type="time" id="lt-end"></div>
+    <button class="btn-submit" id="btn-locktime-save" onclick="submitLockTime()">保存する</button>
+    <div id="locktime-msg"></div>
+  </div>
+  <div id="locktime-load-error" style="display:none"></div>
+  </div>
+
+  <div id="tab-notif" class="tab-panel">
+  <p class="desc">自分（このアカウント）が受け取る通知の種類を選べます。</p>
+  <div class="card">
+    <div class="notif-setting-row">
+      <span>依頼の通知を受け取る</span>
+      <label class="notif-toggle">
+        <input type="checkbox" id="pref-request" checked onchange="saveAdminNotifPref()">
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="notif-setting-row">
+      <span>希望日変更の通知を受け取る</span>
+      <label class="notif-toggle">
+        <input type="checkbox" id="pref-date-change" checked onchange="saveAdminNotifPref()">
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="notif-setting-row">
+      <span>急ぎの通知を受け取る</span>
+      <label class="notif-toggle">
+        <input type="checkbox" id="pref-urgent" checked onchange="saveAdminNotifPref()">
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="notif-setting-row">
+      <span>取消の通知を受け取る</span>
+      <label class="notif-toggle">
+        <input type="checkbox" id="pref-cancel" checked onchange="saveAdminNotifPref()">
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="notif-setting-row">
+      <span id="push-permission-label">スマホへの通知</span>
+      <button id="push-permission-btn" onclick="subscribeToPush()">許可する</button>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = window.APP_CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = window.APP_CONFIG.SUPABASE_KEY;
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = { email: '', name: '', role: '' };
+let lastSizeRows = [];
+let lastClientRows = [];
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateStatusStyle(){
+  const checked = document.querySelector('input[name="ex-status"]:checked').value;
+  document.getElementById('lbl-business').classList.toggle('selected-business', checked === 'business');
+  document.getElementById('lbl-holiday').classList.toggle('selected-holiday', checked === 'holiday');
+}
+
+// =============================================
+// タブ切替
+// =============================================
+const TAB_LOADERS = { size: loadSizes, clients: loadClients, users: loadUsers, stock: loadStockMaster, team: loadTeamMaster, color: loadColorMaster, newsize: loadNewSizeQueue, locktime: loadLockTime, notif: loadAdminNotifPref };
+const loadedTabs = new Set(['holiday']);
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if(!loadedTabs.has(name) && TAB_LOADERS[name]){
+    loadedTabs.add(name);
+    TAB_LOADERS[name]();
+  }
+}
+
+function showFormMsg(text, type){
+  const el = document.getElementById('form-msg');
+  el.className = type;
+  el.textContent = text;
+}
+
+async function loadAdminNotifPref(){
+  const { data } = await sbClient
+    .from('notification_prefs')
+    .select('allow_request, allow_date_change, allow_urgent, allow_cancel')
+    .eq('email', currentUser.email)
+    .maybeSingle();
+  document.getElementById('pref-request').checked = data ? data.allow_request !== false : true;
+  document.getElementById('pref-date-change').checked = data ? data.allow_date_change : true;
+  document.getElementById('pref-urgent').checked = data ? data.allow_urgent : true;
+  document.getElementById('pref-cancel').checked = data ? data.allow_cancel : true;
+}
+
+const VAPID_PUBLIC_KEY = window.APP_CONFIG.VAPID_PUBLIC_KEY;
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+function updatePushButtonState(){
+  const btn = document.getElementById('push-permission-btn');
+  if(!btn) return;
+  if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
+    btn.textContent = '未対応';
+    btn.disabled = true;
+    return;
+  }
+  if(Notification.permission === 'granted'){
+    btn.textContent = '許可済み';
+    btn.disabled = true;
+  } else if(Notification.permission === 'denied'){
+    btn.textContent = 'ブロック中';
+    btn.disabled = true;
+  } else {
+    btn.textContent = '許可する';
+    btn.disabled = false;
+  }
+}
+
+async function subscribeToPush(){
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+      alert('この端末・ブラウザは通知に対応していません');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      updatePushButtonState();
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const json = sub.toJSON();
+    await sbClient.from('push_subscriptions').upsert({
+      email: currentUser.email,
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth
+    }, { onConflict: 'endpoint' });
+    updatePushButtonState();
+  } catch(e){
+    alert('通知の許可に失敗しました');
+  }
+}
+
+async function saveAdminNotifPref(){
+  await sbClient.from('notification_prefs').upsert({
+    email: currentUser.email,
+    allow_request: document.getElementById('pref-request').checked,
+    allow_date_change: document.getElementById('pref-date-change').checked,
+    allow_urgent: document.getElementById('pref-urgent').checked,
+    allow_cancel: document.getElementById('pref-cancel').checked
+  });
+}
+
+// =============================================
+// 登録
+// =============================================
+async function submitException(){
+  const dateVal = document.getElementById('ex-date').value;
+  const statusVal = document.querySelector('input[name="ex-status"]:checked').value; // 'business' or 'holiday'
+  const noteVal = document.getElementById('ex-note').value.trim();
+
+  showFormMsg('', '');
+  if(!dateVal){ showFormMsg('日付を選択してください。', 'err'); return; }
+
+  const btn = document.getElementById('btn-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const { error } = await sbClient.from('business_day_exceptions').insert({
+    exception_date: dateVal,
+    is_business_day: statusVal === 'business',
+    note: noteVal || null,
+    created_by_email: currentUser.email
+  });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showFormMsg('登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+
+  showFormMsg('登録しました。', 'ok');
+  document.getElementById('ex-date').value = '';
+  document.getElementById('ex-note').value = '';
+  document.querySelector('input[name="ex-status"][value="business"]').checked = true;
+  updateStatusStyle();
+
+  await loadExceptions();
+}
+
+// =============================================
+// 削除
+// =============================================
+async function deleteException(id){
+  if(!confirm('この例外設定を削除しますか？')) return;
+  const { error } = await sbClient.from('business_day_exceptions').delete().eq('id', id);
+  if(error){
+    alert('削除に失敗しました：' + error.message);
+    return;
+  }
+  await loadExceptions();
+}
+
+// =============================================
+// 一覧読み込み
+// =============================================
+async function loadExceptions(){
+  const { data, error } = await sbClient
+    .from('business_day_exceptions')
+    .select('id, exception_date, is_business_day, note')
+    .order('exception_date', { ascending: true });
+
+  const listEl = document.getElementById('ex-list');
+  const errEl = document.getElementById('load-error');
+
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+
+  if(!data || !data.length){
+    listEl.innerHTML = '<div class="empty-msg">登録されている例外日はありません</div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(row => `
+    <div class="ex-row">
+      <div class="ex-date">${escapeHtml(row.exception_date)}</div>
+      <span class="ex-status ${row.is_business_day ? 'business' : 'holiday'}">${row.is_business_day ? '営業' : '休業'}</span>
+      <div class="ex-note">${escapeHtml(row.note || '')}</div>
+      <button class="btn-delete" onclick="deleteException('${row.id}')">削除</button>
+    </div>`).join('');
+}
+
+// =============================================
+// サイズ管理（size_master）
+// =============================================
+function showMsg(elId, text, type){
+  const el = document.getElementById(elId);
+  el.className = type;
+  el.textContent = text;
+}
+
+async function submitSize(){
+  const cat = document.getElementById('sz-cat').value.trim();
+  const sub = document.getElementById('sz-sub').value.trim();
+  const size = document.getElementById('sz-size').value.trim();
+
+  showMsg('size-msg', '', '');
+  if(!cat || !size){ showMsg('size-msg', 'カテゴリとサイズを入力してください。', 'err'); return; }
+
+  const dup = lastSizeRows.some(r => r.category === cat && (r.subcategory || '') === sub && r.size === size);
+  if(dup){ showMsg('size-msg', '同じ内容がすでに登録されています。', 'err'); return; }
+
+  const btn = document.getElementById('btn-size-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const { error } = await sbClient.from('size_master').insert({
+    category: cat,
+    subcategory: sub || null,
+    size: size
+  });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('size-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('size-msg', '登録しました。', 'ok');
+  document.getElementById('sz-cat').value = '';
+  document.getElementById('sz-sub').value = '';
+  document.getElementById('sz-size').value = '';
+  await loadSizes();
+}
+
+async function deleteSize(id){
+  if(!confirm('このサイズを削除しますか？')) return;
+  const { error } = await sbClient.from('size_master').delete().eq('id', id);
+  if(error){ alert('削除に失敗しました：' + error.message); return; }
+  await loadSizes();
+}
+
+async function loadSizes(){
+  const { data, error } = await sbClient
+    .from('size_master')
+    .select('id, category, subcategory, size')
+    .order('category').order('subcategory').order('size');
+
+  const listEl = document.getElementById('size-list');
+  const errEl = document.getElementById('size-load-error');
+
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+  lastSizeRows = data || [];
+  renderSizeList();
+}
+
+function renderSizeList(){
+  const listEl = document.getElementById('size-list');
+  const kw = document.getElementById('sz-search').value.trim().toLowerCase();
+  const rows = lastSizeRows.filter(r =>
+    !kw || r.category.toLowerCase().includes(kw) || (r.subcategory||'').toLowerCase().includes(kw) || r.size.toLowerCase().includes(kw)
+  );
+
+  if(!lastSizeRows.length){
+    listEl.innerHTML = '<div class="empty-msg">登録されているサイズはありません</div>';
+    return;
+  }
+  if(!rows.length){
+    listEl.innerHTML = '<div class="empty-msg">一致するサイズがありません</div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map(row => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.category)}${row.subcategory ? '　/　' + escapeHtml(row.subcategory) : ''}<br><span class="mrow-sub">${escapeHtml(row.size)}</span></div>
+      <button class="btn-delete" onclick="deleteSize('${row.id}')">削除</button>
+    </div>`).join('');
+}
+
+// =============================================
+// 客先管理（clients_master）
+// =============================================
+async function submitClient(){
+  const name = document.getElementById('cl-name').value.trim();
+
+  showMsg('client-msg', '', '');
+  if(!name){ showMsg('client-msg', '客先名を入力してください。', 'err'); return; }
+
+  const dup = lastClientRows.some(r => r.name === name);
+  if(dup){ showMsg('client-msg', '同じ客先名がすでに登録されています。', 'err'); return; }
+
+  const btn = document.getElementById('btn-client-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const { error } = await sbClient.from('clients_master').insert({ name });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('client-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('client-msg', '登録しました。', 'ok');
+  document.getElementById('cl-name').value = '';
+  await loadClients();
+}
+
+async function deleteClient(id){
+  if(!confirm('この客先を削除しますか？')) return;
+  const { error } = await sbClient.from('clients_master').delete().eq('id', id);
+  if(error){ alert('削除に失敗しました：' + error.message); return; }
+  await loadClients();
+}
+
+async function loadClients(){
+  const { data, error } = await sbClient
+    .from('clients_master')
+    .select('id, name')
+    .order('name');
+
+  const listEl = document.getElementById('client-list');
+  const errEl = document.getElementById('client-load-error');
+
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+  lastClientRows = data || [];
+  renderClientList();
+}
+
+function renderClientList(){
+  const listEl = document.getElementById('client-list');
+  const kw = document.getElementById('cl-search').value.trim().toLowerCase();
+  const rows = lastClientRows.filter(r => !kw || r.name.toLowerCase().includes(kw));
+
+  if(!lastClientRows.length){
+    listEl.innerHTML = '<div class="empty-msg">登録されている客先はありません</div>';
+    return;
+  }
+  if(!rows.length){
+    listEl.innerHTML = '<div class="empty-msg">一致する客先がありません</div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map(row => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.name)}</div>
+      <button class="btn-delete" onclick="deleteClient('${row.id}')">削除</button>
+    </div>`).join('');
+}
+
+// =============================================
+// ユーザー管理（users_allowlist）
+// =============================================
+async function submitUser(){
+  const email = document.getElementById('us-email').value.trim();
+  const name = document.getElementById('us-name').value.trim();
+  const role = document.getElementById('us-role').value;
+
+  showMsg('user-msg', '', '');
+  if(!email || !name){ showMsg('user-msg', 'メールアドレスと名前を入力してください。', 'err'); return; }
+
+  const btn = document.getElementById('btn-user-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const { error } = await sbClient.from('users_allowlist').upsert({ email, name, role }, { onConflict: 'email' });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('user-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('user-msg', '登録しました。Google Cloud ConsoleのTest usersへの追加もお忘れなく。', 'ok');
+  document.getElementById('us-email').value = '';
+  document.getElementById('us-name').value = '';
+  document.getElementById('us-role').value = '依頼者';
+  await loadUsers();
+}
+
+async function updateUserRole(email, role){
+  const { error } = await sbClient.from('users_allowlist').update({ role }).eq('email', email);
+  if(error){ alert('役割の変更に失敗しました：' + error.message); }
+  await loadUsers();
+}
+
+// 班の変更：teamカラムだけをピンポイントで更新する（行全体は上書きしない）
+async function updateUserTeam(email, teamId){
+  const { error } = await sbClient.from('users_allowlist').update({ team: teamId || null }).eq('email', email);
+  if(error){ alert('班の変更に失敗しました：' + error.message); }
+  await loadUsers();
+}
+
+async function deleteUser(email){
+  if(!confirm('このユーザーを削除しますか？（ログインできなくなります）')) return;
+  const { error } = await sbClient.from('users_allowlist').delete().eq('email', email);
+  if(error){ alert('削除に失敗しました：' + error.message); return; }
+  await loadUsers();
+}
+
+async function loadUsers(){
+  const { data, error } = await sbClient
+    .from('users_allowlist')
+    .select('email, name, role, team')
+    .order('name');
+
+  const { data: teamRows } = await sbClient
+    .from('team_master')
+    .select('id, team_name, is_hidden, sort_order')
+    .order('sort_order');
+  const teamList = teamRows || [];
+
+  const listEl = document.getElementById('user-list');
+  const errEl = document.getElementById('user-load-error');
+
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+
+  if(!data || !data.length){
+    listEl.innerHTML = '<div class="empty-msg">登録されているユーザーはいません</div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(row => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.name)}<br><span class="mrow-sub">${escapeHtml(row.email)}</span></div>
+      <select class="role-select" onchange="updateUserRole('${row.email}', this.value)">
+        <option value="依頼者" ${row.role==='依頼者'?'selected':''}>依頼者</option>
+        <option value="作業者" ${row.role==='作業者'?'selected':''}>作業者</option>
+        <option value="管理者" ${row.role==='管理者'?'selected':''}>管理者</option>
+      </select>
+      ${row.role === '依頼者' ? teamSelectHtml(row, teamList) : ''}
+      <button class="btn-delete" onclick="deleteUser('${row.email}')">削除</button>
+    </div>`).join('');
+}
+
+// 依頼者の班の選択欄（班マスタの表示中の班＋現在の班が非表示の場合はそれも）
+function teamSelectHtml(row, teamList){
+  const opts = ['<option value="">班を選択</option>'];
+  teamList.forEach(t => {
+    if(t.is_hidden && t.id !== row.team) return;
+    const label = t.team_name + (t.is_hidden ? '（非表示）' : '');
+    opts.push(`<option value="${t.id}" ${row.team === t.id ? 'selected' : ''}>${escapeHtml(label)}</option>`);
+  });
+  const unset = !row.team ? ' style="border-color:#c0392b"' : '';
+  return `<select class="role-select"${unset} onchange="updateUserTeam('${row.email}', this.value)">${opts.join('')}</select>`;
+}
+
+// =============================================
+// 共通品管理（stock_items / item_type='common'）
+// =============================================
+let lastStockRows = [];
+
+async function submitStockItem(){
+  const name = document.getElementById('st-name').value.trim();
+
+  showMsg('stock-msg', '', '');
+  if(!name){ showMsg('stock-msg', '品目名を入力してください。', 'err'); return; }
+
+  const dup = lastStockRows.some(r => r.item_name === name);
+  if(dup){ showMsg('stock-msg', '同じ品目名がすでに登録されています。', 'err'); return; }
+
+  const btn = document.getElementById('btn-stock-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const maxOrder = lastStockRows.reduce((m, r) => Math.max(m, r.sort_order ?? 0), 0);
+
+  const { error } = await sbClient.from('stock_items').insert({
+    item_type: 'common',
+    item_name: name,
+    stock_qty: 0,
+    min_line: 0,
+    is_hidden: false,
+    sort_order: maxOrder + 1
+  });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('stock-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('stock-msg', '登録しました。', 'ok');
+  document.getElementById('st-name').value = '';
+  await loadStockMaster();
+}
+
+async function hideStockItem(id, stockQty){
+  if(stockQty > 0){
+    if(!confirm('現在の在庫が0ではありません（在庫数：' + stockQty + '）。非表示にしてもよろしいですか？')) return;
+  } else {
+    if(!confirm('この品目を非表示にしますか？')) return;
+  }
+  const { error } = await sbClient.from('stock_items').update({ is_hidden: true }).eq('id', id);
+  if(error){ alert('非表示にできませんでした：' + error.message); return; }
+  await loadStockMaster();
+}
+
+async function unhideStockItem(id){
+  const { error } = await sbClient.from('stock_items').update({ is_hidden: false }).eq('id', id);
+  if(error){ alert('再表示に失敗しました：' + error.message); return; }
+  await loadStockMaster();
+}
+
+async function moveStockItem(id, direction){
+  const visible = lastStockRows.filter(r => !r.is_hidden)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const idx = visible.findIndex(r => r.id === id);
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if(idx === -1 || targetIdx < 0 || targetIdx >= visible.length) return;
+
+  const rowA = visible[idx];
+  const rowB = visible[targetIdx];
+  const orderA = rowA.sort_order ?? 0;
+  const orderB = rowB.sort_order ?? 0;
+
+  const { error: errA } = await sbClient.from('stock_items').update({ sort_order: orderB }).eq('id', rowA.id);
+  const { error: errB } = await sbClient.from('stock_items').update({ sort_order: orderA }).eq('id', rowB.id);
+  if(errA || errB){ alert('並び替えに失敗しました：' + (errA || errB).message); return; }
+  await loadStockMaster();
+}
+
+async function loadStockMaster(){
+  const { data, error } = await sbClient
+    .from('stock_items')
+    .select('id, item_name, stock_qty, min_line, is_hidden, sort_order')
+    .eq('item_type', 'common')
+    .order('sort_order')
+    .order('item_name');
+
+  const errEl = document.getElementById('stock-load-error');
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+  lastStockRows = data || [];
+  renderStockMasterList();
+}
+
+async function saveMinLine(id){
+  const input = document.getElementById('minline-' + id);
+  const msgEl = document.getElementById('minline-msg-' + id);
+  const newVal = parseInt(input.value, 10);
+
+  if(isNaN(newVal) || newVal < 0){
+    msgEl.textContent = '0以上の数値を入力してください。';
+    return;
+  }
+  msgEl.textContent = '';
+
+  const { error } = await sbClient.from('stock_items').update({ min_line: newVal }).eq('id', id);
+  if(error){
+    msgEl.textContent = '保存に失敗しました：' + error.message;
+    return;
+  }
+  msgEl.textContent = '保存しました。';
+  const row = lastStockRows.find(r => r.id === id);
+  if(row) row.min_line = newVal;
+}
+
+function renderStockMasterList(){
+  const visEl = document.getElementById('stock-list-visible');
+  const hidEl = document.getElementById('stock-list-hidden');
+  const visible = lastStockRows.filter(r => !r.is_hidden);
+  const hidden = lastStockRows.filter(r => r.is_hidden);
+
+  visEl.innerHTML = visible.length ? visible.map((row, idx) => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.item_name)}<br><span class="mrow-sub">在庫数：${row.stock_qty ?? 0}</span>
+        <div class="minline-edit">
+          <label>最低数ライン</label>
+          <input type="number" min="0" id="minline-${row.id}" value="${row.min_line ?? 0}">
+          <button class="btn-small" onclick="saveMinLine('${row.id}')">変更する</button>
+          <span id="minline-msg-${row.id}" class="minline-msg"></span>
+        </div>
+      </div>
+      <div class="mrow-btns">
+        <button class="btn-small" onclick="moveStockItem('${row.id}','up')" ${idx === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn-small" onclick="moveStockItem('${row.id}','down')" ${idx === visible.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn-delete" onclick="hideStockItem('${row.id}', ${row.stock_qty ?? 0})">非表示にする</button>
+      </div>
+    </div>`).join('') : '<div class="empty-msg">表示中の品目はありません</div>';
+
+  hidEl.innerHTML = hidden.length ? hidden.map(row => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.item_name)}<br><span class="mrow-sub">在庫数：${row.stock_qty ?? 0}／最低数ライン：${row.min_line ?? 0}</span></div>
+      <button class="btn-delete" onclick="unhideStockItem('${row.id}')">再表示する</button>
+    </div>`).join('') : '<div class="empty-msg">非表示の品目はありません</div>';
+}
+
+// =============================================
+// 班管理（team_master）
+// =============================================
+let lastTeamRows = [];
+
+async function submitTeam(){
+  const name = document.getElementById('tm-name').value.trim();
+  const abbr = document.getElementById('tm-abbr').value.trim();
+
+  showMsg('team-msg', '', '');
+  if(!name){ showMsg('team-msg', '班名を入力してください。', 'err'); return; }
+  if(!abbr){ showMsg('team-msg', '略号を入力してください。', 'err'); return; }
+
+  const dup = lastTeamRows.some(r => r.team_name === name);
+  if(dup){ showMsg('team-msg', '同じ班名がすでに登録されています。', 'err'); return; }
+
+  const btn = document.getElementById('btn-team-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const maxOrder = lastTeamRows.reduce((m, r) => Math.max(m, r.sort_order ?? 0), 0);
+
+  const { error } = await sbClient.from('team_master').insert({
+    team_name: name,
+    team_abbr: abbr,
+    is_hidden: false,
+    sort_order: maxOrder + 1
+  });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('team-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('team-msg', '登録しました。', 'ok');
+  document.getElementById('tm-name').value = '';
+  document.getElementById('tm-abbr').value = '';
+  await loadTeamMaster();
+}
+
+async function hideTeam(id){
+  if(!confirm('この班を非表示にしますか？')) return;
+  const { error } = await sbClient.from('team_master').update({ is_hidden: true }).eq('id', id);
+  if(error){ alert('非表示にできませんでした：' + error.message); return; }
+  await loadTeamMaster();
+}
+
+async function unhideTeam(id){
+  const { error } = await sbClient.from('team_master').update({ is_hidden: false }).eq('id', id);
+  if(error){ alert('再表示に失敗しました：' + error.message); return; }
+  await loadTeamMaster();
+}
+
+async function saveTeamAbbr(id){
+  const input = document.getElementById('team-abbr-' + id);
+  const msgEl = document.getElementById('team-abbr-msg-' + id);
+  const newVal = input.value.trim();
+
+  if(!newVal){
+    msgEl.textContent = '略号を入力してください。';
+    return;
+  }
+  msgEl.textContent = '';
+
+  const { error } = await sbClient.from('team_master').update({ team_abbr: newVal }).eq('id', id);
+  if(error){
+    msgEl.textContent = '保存に失敗しました：' + error.message;
+    return;
+  }
+  msgEl.textContent = '保存しました。';
+  const row = lastTeamRows.find(r => r.id === id);
+  if(row) row.team_abbr = newVal;
+}
+
+async function moveTeam(id, direction){
+  const visible = lastTeamRows.filter(r => !r.is_hidden)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const idx = visible.findIndex(r => r.id === id);
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if(idx === -1 || targetIdx < 0 || targetIdx >= visible.length) return;
+
+  const rowA = visible[idx];
+  const rowB = visible[targetIdx];
+  const orderA = rowA.sort_order ?? 0;
+  const orderB = rowB.sort_order ?? 0;
+
+  const { error: errA } = await sbClient.from('team_master').update({ sort_order: orderB }).eq('id', rowA.id);
+  const { error: errB } = await sbClient.from('team_master').update({ sort_order: orderA }).eq('id', rowB.id);
+  if(errA || errB){ alert('並び替えに失敗しました：' + (errA || errB).message); return; }
+  await loadTeamMaster();
+}
+
+async function loadTeamMaster(){
+  const { data, error } = await sbClient
+    .from('team_master')
+    .select('id, team_name, team_abbr, is_hidden, sort_order')
+    .order('sort_order');
+
+  const errEl = document.getElementById('team-load-error');
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+  lastTeamRows = data || [];
+  renderTeamMasterList();
+}
+
+function renderTeamMasterList(){
+  const visEl = document.getElementById('team-list-visible');
+  const hidEl = document.getElementById('team-list-hidden');
+  const visible = lastTeamRows.filter(r => !r.is_hidden);
+  const hidden = lastTeamRows.filter(r => r.is_hidden);
+
+  visEl.innerHTML = visible.length ? visible.map((row, idx) => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.team_name)}
+        <div class="minline-edit">
+          <label>略号</label>
+          <input type="text" maxlength="1" id="team-abbr-${row.id}" value="${escapeHtml(row.team_abbr || '')}">
+          <button class="btn-small" onclick="saveTeamAbbr('${row.id}')">変更する</button>
+          <span id="team-abbr-msg-${row.id}" class="minline-msg"></span>
+        </div>
+      </div>
+      <div class="mrow-btns">
+        <button class="btn-small" onclick="moveTeam('${row.id}','up')" ${idx === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn-small" onclick="moveTeam('${row.id}','down')" ${idx === visible.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn-delete" onclick="hideTeam('${row.id}')">非表示にする</button>
+      </div>
+    </div>`).join('') : '<div class="empty-msg">表示中の班はありません</div>';
+
+  hidEl.innerHTML = hidden.length ? hidden.map(row => `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(row.team_name)}<br><span class="mrow-sub">略号：${escapeHtml(row.team_abbr || '')}</span></div>
+      <button class="btn-delete" onclick="unhideTeam('${row.id}')">再表示する</button>
+    </div>`).join('') : '<div class="empty-msg">非表示の班はありません</div>';
+}
+
+// =============================================
+// 色管理（color_master）
+// =============================================
+let lastColorRows = [];
+
+async function submitColor(){
+  const name = document.getElementById('cl-name').value.trim();
+  const code = document.getElementById('cl-code').value;
+
+  showMsg('color-msg', '', '');
+  if(!name){ showMsg('color-msg', '色の名前を入力してください。', 'err'); return; }
+
+  const dup = lastColorRows.some(r => r.color_name === name);
+  if(dup){ showMsg('color-msg', '同じ名前の色がすでに登録されています。', 'err'); return; }
+
+  const btn = document.getElementById('btn-color-add');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  const maxOrder = lastColorRows.reduce((m, r) => Math.max(m, r.sort_order ?? 0), 0);
+
+  const { error } = await sbClient.from('color_master').insert({
+    color_name: name,
+    color_code: code,
+    sort_order: maxOrder + 1
+  });
+
+  btn.disabled = false; btn.textContent = '登録する';
+
+  if(error){
+    showMsg('color-msg', '登録に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('color-msg', '登録しました。', 'ok');
+  document.getElementById('cl-name').value = '';
+  await loadColorMaster();
+}
+
+async function saveColorName(id){
+  const input = document.getElementById('color-name-' + id);
+  const msgEl = document.getElementById('color-name-msg-' + id);
+  const newVal = input.value.trim();
+
+  if(!newVal){
+    msgEl.textContent = '名前を入力してください。';
+    return;
+  }
+  msgEl.textContent = '';
+
+  const { error } = await sbClient.from('color_master').update({ color_name: newVal }).eq('id', id);
+  if(error){
+    msgEl.textContent = '保存に失敗しました：' + error.message;
+    return;
+  }
+  msgEl.textContent = '保存しました。';
+  const row = lastColorRows.find(r => r.id === id);
+  if(row) row.color_name = newVal;
+}
+
+async function saveColorCode(id, newVal){
+  const { error } = await sbClient.from('color_master').update({ color_code: newVal }).eq('id', id);
+  const msgEl = document.getElementById('color-code-msg-' + id);
+  if(error){
+    if(msgEl) msgEl.textContent = '保存に失敗しました：' + error.message;
+    return;
+  }
+  if(msgEl) msgEl.textContent = '保存しました。';
+  const row = lastColorRows.find(r => r.id === id);
+  if(row) row.color_code = newVal;
+}
+
+async function moveColor(id, direction){
+  const list = [...lastColorRows].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const idx = list.findIndex(r => r.id === id);
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if(idx === -1 || targetIdx < 0 || targetIdx >= list.length) return;
+
+  const rowA = list[idx];
+  const rowB = list[targetIdx];
+  const orderA = rowA.sort_order ?? 0;
+  const orderB = rowB.sort_order ?? 0;
+
+  const { error: errA } = await sbClient.from('color_master').update({ sort_order: orderB }).eq('id', rowA.id);
+  const { error: errB } = await sbClient.from('color_master').update({ sort_order: orderA }).eq('id', rowB.id);
+  if(errA || errB){ alert('並び替えに失敗しました：' + (errA || errB).message); return; }
+  await loadColorMaster();
+}
+
+async function loadColorMaster(){
+  const { data, error } = await sbClient
+    .from('color_master')
+    .select('id, color_name, color_code, sort_order')
+    .order('sort_order');
+
+  const errEl = document.getElementById('color-load-error');
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+  lastColorRows = data || [];
+  renderColorMasterList();
+}
+
+function renderColorMasterList(){
+  const listEl = document.getElementById('color-list');
+  const sorted = [...lastColorRows].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  listEl.innerHTML = sorted.length ? sorted.map((row, idx) => `
+    <div class="mrow">
+      <div class="mrow-main">
+        <span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:${escapeHtml(row.color_code)};border:1px solid #999;vertical-align:middle;margin-right:6px"></span>
+        <div class="minline-edit">
+          <label>名前</label>
+          <input type="text" id="color-name-${row.id}" value="${escapeHtml(row.color_name || '')}">
+          <button class="btn-small" onclick="saveColorName('${row.id}')">変更する</button>
+          <span id="color-name-msg-${row.id}" class="minline-msg"></span>
+        </div>
+        <div class="minline-edit">
+          <label>色</label>
+          <input type="color" value="${escapeHtml(row.color_code || '#000000')}" onchange="saveColorCode('${row.id}', this.value)">
+          <span id="color-code-msg-${row.id}" class="minline-msg"></span>
+        </div>
+      </div>
+      <div class="mrow-btns">
+        <button class="btn-small" onclick="moveColor('${row.id}','up')" ${idx === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn-small" onclick="moveColor('${row.id}','down')" ${idx === sorted.length - 1 ? 'disabled' : ''}>↓</button>
+      </div>
+    </div>`).join('') : '<div class="empty-msg">登録されている色はありません</div>';
+}
+
+
+// =============================================
+// 新サイズ承認待ち（request_items.is_new_size）
+// =============================================
+let lastNewSizeGroups = [];
+
+function splitCategorySub(category){
+  if(category.startsWith('工機_')){
+    return { category: '工機', subcategory: category.slice(3) };
+  }
+  return { category, subcategory: null };
+}
+
+let newCategoryThreshold = 5;
+let newCategoryThresholdRowId = null;
+
+// 新カテゴリの「登録推奨」しきい値（business_settings）の読込・保存
+async function loadNewCategoryThreshold(){
+  const { data, error } = await sbClient
+    .from('business_settings')
+    .select('id, new_category_threshold')
+    .limit(1)
+    .maybeSingle();
+  if(error || !data) return;
+  newCategoryThresholdRowId = data.id;
+  if(data.new_category_threshold != null) newCategoryThreshold = data.new_category_threshold;
+  const el = document.getElementById('ncat-threshold');
+  if(el) el.value = newCategoryThreshold;
+}
+
+async function submitNewCategoryThreshold(){
+  const val = parseInt(document.getElementById('ncat-threshold').value, 10);
+  showMsg('ncat-threshold-msg', '', '');
+  if(!val || val < 1){ showMsg('ncat-threshold-msg', '1以上の数値を入力してください。', 'err'); return; }
+  if(!newCategoryThresholdRowId){ showMsg('ncat-threshold-msg', '設定行が見つかりません。読み込みからやり直してください。', 'err'); return; }
+
+  const btn = document.getElementById('btn-ncat-threshold-save');
+  btn.disabled = true; btn.textContent = '保存中...';
+
+  const { error } = await sbClient
+    .from('business_settings')
+    .update({ new_category_threshold: val })
+    .eq('id', newCategoryThresholdRowId);
+
+  btn.disabled = false; btn.textContent = '保存する';
+
+  if(error){ showMsg('ncat-threshold-msg', '保存に失敗しました：' + error.message, 'err'); return; }
+  newCategoryThreshold = val;
+  showMsg('ncat-threshold-msg', '保存しました。', 'ok');
+  renderNewSizeQueue();
+}
+
+let pendingCategoriesMap = {}; // 仮カテゴリID → {category_name, status}（pending_categories全件）
+let pendingCategoryTotals = {}; // 仮カテゴリIDごとの累計件数（承認済み・却下済み・未承認すべて含む）
+
+async function loadNewSizeQueue(){
+  await loadNewCategoryThreshold();
+
+  // 仮カテゴリ一覧（新カテゴリ・承認待ちの名前と状態）を取得
+  const { data: pendingCats, error: pendingErr } = await sbClient
+    .from('pending_categories')
+    .select('id, category_name, status');
+  pendingCategoriesMap = {};
+  if(!pendingErr){
+    (pendingCats || []).forEach(r => { pendingCategoriesMap[r.id] = r; });
+  }
+
+  // 累計件数（承認済み・却下済み・未承認すべて）を仮カテゴリID単位で数える
+  const { data: allRows, error: allErr } = await sbClient
+    .from('request_items')
+    .select('pending_category_id')
+    .eq('is_new_size', true)
+    .not('pending_category_id', 'is', null);
+  pendingCategoryTotals = {};
+  if(!allErr){
+    (allRows || []).forEach(r => {
+      pendingCategoryTotals[r.pending_category_id] = (pendingCategoryTotals[r.pending_category_id] || 0) + 1;
+    });
+  }
+
+  // 一覧に表示・操作するのは、まだ管理者が判断していない（未承認の）分だけ
+  const { data, error } = await sbClient
+    .from('request_items')
+    .select('id, category, size_l, size_w, size_h, pending_category_id')
+    .eq('is_new_size', true)
+    .eq('new_size_reviewed', false)
+    .order('created_at', { ascending: true });
+
+  const errEl = document.getElementById('newsize-load-error');
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '一覧の取得に失敗しました：' + error.message;
+    updateNewSizeBadge(0);
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const rows = data || [];
+  updateNewSizeBadge(rows.length);
+
+  const groups = {};
+  rows.forEach(r => {
+    const key = r.category + '|' + r.size_l + '|' + r.size_w + '|' + r.size_h;
+    if(!groups[key]){
+      groups[key] = { category: r.category, size_l: r.size_l, size_w: r.size_w, size_h: r.size_h, ids: [], count: 0, pendingCategoryId: r.pending_category_id };
+    }
+    groups[key].ids.push(r.id);
+    groups[key].count++;
+  });
+  // 仮カテゴリの累計件数（未反映のものが優先）が多い順に並べ、同じカテゴリはまとめて隣接させる
+  lastNewSizeGroups = Object.values(groups).sort((a, b) => {
+    const totalA = a.pendingCategoryId ? (pendingCategoryTotals[a.pendingCategoryId] || 0) : 0;
+    const totalB = b.pendingCategoryId ? (pendingCategoryTotals[b.pendingCategoryId] || 0) : 0;
+    const diff = totalB - totalA;
+    if(diff !== 0) return diff;
+    return a.category.localeCompare(b.category, 'ja');
+  });
+  renderNewSizeQueue();
+}
+
+function updateNewSizeBadge(count){
+  const badge = document.getElementById('newsize-badge');
+  if(count > 0){
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderNewSizeQueue(){
+  const listEl = document.getElementById('newsize-list');
+  if(!lastNewSizeGroups.length){
+    listEl.innerHTML = '<div class="empty-msg">承認待ちの新サイズはありません</div>';
+    return;
+  }
+
+  let html = '';
+  let prevCategory = null;
+
+  lastNewSizeGroups.forEach((g, i) => {
+    const pcat = g.pendingCategoryId ? pendingCategoriesMap[g.pendingCategoryId] : null;
+    // 仮カテゴリに紐づかない（＝既存の正式カテゴリの新サイズ）場合と、
+    // 仮カテゴリが既に昇格済みの場合は、個別に「サイズ登録する」を出してよい
+    const isPromoted = !pcat || pcat.status === 'promoted';
+    const catTotal = pcat ? (pendingCategoryTotals[g.pendingCategoryId] || g.count) : 0;
+
+    // カテゴリが切り替わったタイミングで、未昇格の仮カテゴリなら見出し＋昇格ボタンを差し込む
+    if(g.category !== prevCategory){
+      prevCategory = g.category;
+      if(pcat && pcat.status !== 'promoted'){
+        const canPromote = catTotal >= newCategoryThreshold;
+        html += `
+        <div class="mrow" style="background:${canPromote ? '#fff8e1' : '#f5f5f5'}">
+          <div class="mrow-main">
+            <b>${escapeHtml(g.category)}</b>（新カテゴリ・未反映）　累計${catTotal}件${canPromote ? '<span style="margin-left:6px;color:#856404;font-weight:bold">しきい値到達</span>' : `（あと${newCategoryThreshold - catTotal}件でカテゴリ一覧に昇格可能）`}
+          </div>
+          ${canPromote ? `<div class="mrow-btns"><button class="btn-approve" onclick="promoteCategory('${g.pendingCategoryId}')">「${escapeHtml(g.category)}」をカテゴリ一覧に昇格する</button></div>` : ''}
+        </div>`;
+      }
+    }
+
+    const sizeTxt = `${g.size_l ?? ''}×${g.size_w ?? ''}×${g.size_h ?? ''}`;
+    html += `
+    <div class="mrow">
+      <div class="mrow-main">${escapeHtml(g.category)}　${escapeHtml(sizeTxt)}<br><span class="mrow-sub">${g.count}件の依頼で使用</span></div>
+      <div class="mrow-btns">
+        ${isPromoted ? `<button class="btn-approve" onclick="approveNewSize(${i})">サイズ登録する</button>` : ''}
+        <button class="btn-delete" onclick="rejectNewSize(${i})">登録しない</button>
+      </div>
+    </div>`;
+  });
+
+  listEl.innerHTML = html;
+}
+
+// しきい値に到達した未昇格の仮カテゴリを、その未承認サイズをすべて一括でsize_masterへ登録する
+async function promoteCategory(pendingCategoryId){
+  const targetGroups = lastNewSizeGroups.filter(g => g.pendingCategoryId === pendingCategoryId);
+  if(!targetGroups.length) return;
+  const categoryName = targetGroups[0].category;
+  if(!confirm(`「${categoryName}」の未承認サイズ${targetGroups.length}件をまとめてカテゴリ一覧に登録します。よろしいですか？`)) return;
+
+  for(const g of targetGroups){
+    const { category, subcategory } = splitCategorySub(g.category);
+    const sizeTxt = `${g.size_l ?? ''}×${g.size_w ?? ''}×${g.size_h ?? ''}`;
+
+    const { data: dupRows, error: dupErr } = await sbClient
+      .from('size_master')
+      .select('id, subcategory')
+      .eq('category', category)
+      .eq('size', sizeTxt);
+    if(dupErr){ alert('確認に失敗しました：' + dupErr.message); return; }
+
+    const alreadyExists = (dupRows || []).some(r => (r.subcategory || '') === (subcategory || ''));
+    if(!alreadyExists){
+      const { error: insErr } = await sbClient.from('size_master').insert({ category, subcategory, size: sizeTxt });
+      if(insErr){ alert('登録に失敗しました：' + insErr.message); return; }
+    }
+
+    const { error: updErr } = await sbClient.from('request_items').update({ new_size_reviewed: true }).in('id', g.ids);
+    if(updErr){ alert('承認処理に失敗しました：' + updErr.message); return; }
+  }
+
+  const { error: statusErr } = await sbClient
+    .from('pending_categories')
+    .update({ status: 'promoted' })
+    .eq('id', pendingCategoryId);
+  if(statusErr){ alert('昇格状態の更新に失敗しました：' + statusErr.message); return; }
+
+  loadedTabs.delete('size');
+  await loadNewSizeQueue();
+}
+
+async function approveNewSize(idx){
+  const g = lastNewSizeGroups[idx];
+  if(!g) return;
+  const { category, subcategory } = splitCategorySub(g.category);
+  const sizeTxt = `${g.size_l ?? ''}×${g.size_w ?? ''}×${g.size_h ?? ''}`;
+
+  const { data: dupRows, error: dupErr } = await sbClient
+    .from('size_master')
+    .select('id, subcategory')
+    .eq('category', category)
+    .eq('size', sizeTxt);
+  if(dupErr){ alert('確認に失敗しました：' + dupErr.message); return; }
+
+  const alreadyExists = (dupRows || []).some(r => (r.subcategory || '') === (subcategory || ''));
+  if(!alreadyExists){
+    const { error: insErr } = await sbClient.from('size_master').insert({ category, subcategory, size: sizeTxt });
+    if(insErr){ alert('サイズ登録に失敗しました：' + insErr.message); return; }
+  }
+
+  const { error: updErr } = await sbClient.from('request_items').update({ new_size_reviewed: true }).in('id', g.ids);
+  if(updErr){ alert('承認処理に失敗しました：' + updErr.message); return; }
+
+  loadedTabs.delete('size');
+  await loadNewSizeQueue();
+}
+
+async function rejectNewSize(idx){
+  const g = lastNewSizeGroups[idx];
+  if(!g) return;
+  if(!confirm('このサイズを一覧から外しますか？（依頼データ自体は削除されません）')) return;
+
+  const { error } = await sbClient.from('request_items').update({ new_size_reviewed: true }).in('id', g.ids);
+  if(error){ alert('処理に失敗しました：' + error.message); return; }
+  await loadNewSizeQueue();
+}
+
+const URLS = {
+  home: 'home.html',
+  stock: 'stock_view.html',
+  workCalendar: 'work_calendar.html',
+  requestCalendar: 'request_calendar.html',
+  receptionLog: 'reception_log.html',
+  settings: 'business_days_admin.html',
+  changeHistory: 'change_history.html'
+};
+const icons = {
+  home: `<path d="M4 11l8-7 8 7"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/>`,
+  calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>`,
+  stock: `<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>`,
+  doc: `<path d="M6 3h9l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h3M8 16h6M8 10h2"/>`,
+  gear: `<circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M4.6 7.3l2 1.2M17.4 15.5l2 1.2M4.6 16.7l2-1.2M17.4 8.5l2-1.2M3 12h2.4M18.6 12H21"/>`,
+  truck: `<rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="1.6"/><circle cx="16.5" cy="19" r="1.6"/>`,
+  history: `<path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>`
+};
+function icon(name, extra=''){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" ${extra}>${icons[name]}</svg>`; }
+function sidebarNavItem(iconName, label, url, active){
+  return `<a class="as-item ${active ? 'active' : ''}" href="${active ? '#' : url}">${icon(iconName,'stroke-width="1.8"')}<div class="as-label">${label}</div></a>`;
+}
+function renderAdminSidebar(){
+  const items = [
+    ['home','ホーム', URLS.home, false],
+    ['calendar','依頼<br>カレンダー', URLS.requestCalendar, false],
+    ['truck','作業<br>カレンダー', URLS.workCalendar, false],
+    ['doc','受付<br>日報', URLS.receptionLog, false],
+    ['stock','在庫表', URLS.stock, false],
+    ['history','変更<br>履歴', URLS.changeHistory, false],
+    ['gear','設定', URLS.settings, true]
+  ];
+  document.getElementById('adminSidebarNav').innerHTML = items
+    .map(([iconName, label, url, active]) => sidebarNavItem(iconName, label, url, active))
+    .join('');
+}
+
+async function loginWithGoogle(){
+  const { error } = await sbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error){
+    document.getElementById('auth-msg').textContent = 'ログインに失敗しました：' + error.message;
+  }
+}
+
+async function initAuth(){
+  const { data: { user } } = await sbClient.auth.getUser();
+
+  if(!user){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-login').style.display='block';
+    return;
+  }
+
+  const { data: allowRow, error: allowErr } = await sbClient
+    .from('users_allowlist')
+    .select('name, role')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if(allowErr || !allowRow || !allowRow.name || allowRow.role !== '管理者'){
+    document.getElementById('auth-loading').style.display='none';
+    document.getElementById('auth-denied').style.display='block';
+    return;
+  }
+
+  currentUser.email = user.email;
+  currentUser.name = allowRow.name;
+  currentUser.role = allowRow.role;
+
+  document.getElementById('login-name-display').textContent = currentUser.name;
+  document.getElementById('auth-loading').style.display='none';
+  document.getElementById('admin-shell').style.display='flex';
+  document.getElementById('app-content').style.display='block';
+  renderAdminSidebar();
+
+  await loadExceptions();
+  await loadNewSizeQueue();
+  loadedTabs.add('newsize');
+}
+
+// =============================================
+// ロック時間（business_settings）
+// =============================================
+let lockTimeRowId = null;
+
+async function loadLockTime(){
+  const { data, error } = await sbClient
+    .from('business_settings')
+    .select('id, lock_start_time, lock_end_time')
+    .limit(1)
+    .maybeSingle();
+
+  const errEl = document.getElementById('locktime-load-error');
+  if(error){
+    errEl.style.display = 'block';
+    errEl.textContent = '設定の取得に失敗しました：' + error.message;
+    return;
+  }
+  errEl.style.display = 'none';
+
+  if(data){
+    lockTimeRowId = data.id;
+    document.getElementById('lt-start').value = (data.lock_start_time || '').slice(0,5);
+    document.getElementById('lt-end').value = (data.lock_end_time || '').slice(0,5);
+  }
+}
+
+async function submitLockTime(){
+  const startVal = document.getElementById('lt-start').value;
+  const endVal = document.getElementById('lt-end').value;
+
+  showMsg('locktime-msg', '', '');
+  if(!startVal || !endVal){ showMsg('locktime-msg', '開始・終了の両方を入力してください。', 'err'); return; }
+  if(!lockTimeRowId){ showMsg('locktime-msg', '設定行が見つかりません。読み込みからやり直してください。', 'err'); return; }
+
+  const btn = document.getElementById('btn-locktime-save');
+  btn.disabled = true; btn.textContent = '保存中...';
+
+  const { error } = await sbClient
+    .from('business_settings')
+    .update({ lock_start_time: startVal + ':00', lock_end_time: endVal + ':00' })
+    .eq('id', lockTimeRowId);
+
+  btn.disabled = false; btn.textContent = '保存する';
+
+  if(error){
+    showMsg('locktime-msg', '保存に失敗しました：' + error.message, 'err');
+    return;
+  }
+  showMsg('locktime-msg', '保存しました。', 'ok');
+}
+
+initAuth();
+updatePushButtonState();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("service-worker.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
