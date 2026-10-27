@@ -4,8 +4,7 @@ window.APP_CONFIG = {
   ENV_LABEL: '',
   SUPABASE_URL: 'https://kzeqpqwvolrpusmmqwmt.supabase.co',
   SUPABASE_KEY: 'sb_publishable_NwxSSSpZOMZGF4P61YDJ3A_axlbmJxM',
-  VAPID_PUBLIC_KEY: 'BBeF6QGL-hKFJTa4TBtqG3VRGz-IqDBzdvSkE7DS2vwaSOdFkDRzDcfxgD22gWajQF19pCotNpDsdQYTDSet66g
-'
+  VAPID_PUBLIC_KEY: 'BBeF6QGL-hKFJTa4TBtqG3VRGz-IqDBzdvSkE7DS2vwaSOdFkDRzDcfxgD22gWajQF19pCotNpDsdQYTDSet66g'
 };
 
 (function(){
